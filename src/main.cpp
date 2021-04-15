@@ -17,23 +17,18 @@ extern "C" {
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
 
-const char* ssid = "t_k";                   // SSID and ...
-const char* pass = "tk12-45rfg-98ijd";      // password for the WiFi network used
-//const char* ssid = "dd-wrt";                   // SSID and ...
-//const char* pass = "1973-2000-2009";      // password for the WiFi network used
+const char* ssid   = "*";                   // SSID and ...
+const char* pass   = "*";                   // password for the WiFi network used
 
-//dd-wrt
-//1973-2000-2009
+const char* mqttServer = "192.168.1.10";    // mqqt server
+const int mqttPort     = 1883;
+const char* mqttUser   = "mqtt";
+const char* mqttPass   = "mqtt";
 
-const char* mqttServer = "192.168.1.10";
-const int mqttPort = 1883;
-const char* mqttUser ="mqtt";
-const char* mqttPass ="mqtt";
-
-//const char* mqqtTopicPower = "powermetter/sdm200/power";
+//const char* mqqtTopicPower  = "powermetter/sdm200/power";
 //const char* mqqtTopicEnergy = "powermetter/sdm200/energy";
-//const char* mqqtTopicTotal = "powermetter/sdm200/total";
-//const char* mqqtTopicError = "powermetter/sdm200/error";
+//const char* mqqtTopicTotal  = "powermetter/sdm200/total";
+//const char* mqqtTopicError  = "powermetter/sdm200/error";
 //SDM220Processing sdm220Processing;
 
 const char* mqqtTopicPower = "powermetter/pzem/power";
