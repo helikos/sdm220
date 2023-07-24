@@ -22,6 +22,15 @@
 
 extern Logger logger;
 
+SDM220InputRegisterEnergy::SDM220InputRegisterEnergy() {
+  frequency = -1.0;
+  importActiveEnergy = -1.0;
+  exportActiveEnergy = -1.0;
+  importReactiveEnergy = -1.0;
+  exportReactiveEnergy = -1.0;
+}
+
+
 SDM220InputRegisterEnergy::SDM220InputRegisterEnergy(ModbusMessage response) {
   response.get(3, frequency);
   response.get(7, importActiveEnergy);
@@ -52,4 +61,10 @@ String SDM220InputRegisterEnergy::toJson() {
   String output;
   serializeJson(doc, output);
   return output;
+}
+
+bool SDM220InputRegisterEnergy::isChanged(SDM220InputRegisterEnergy value)
+{
+  return (abs(value.importActiveEnergy - importActiveEnergy) / value.importActiveEnergy) * 100 > 5
+         || (abs(value.importReactiveEnergy - importReactiveEnergy) / value.importReactiveEnergy) * 100 > 5;
 }

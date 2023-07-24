@@ -1,13 +1,13 @@
 
 #include <WiFi.h>
-#include "WiFiContext.h"
-#include "Logger.h"
+#include "utils/WiFiContext.h"
+#include "utils/Logger.h"
 
 extern "C"
 {
 #include "freertos/timers.h"
 }
-#include "MqttContext.h"
+#include "utils/MqttContext.h"
 
 #define wifiTimeOfReconect pdMS_TO_TICKS(2000)
 
