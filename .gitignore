@@ -39,3 +39,8 @@
 
 
 security.h
+
+# General macbook
+.DS_Store
+.AppleDouble
+.LSOverride
