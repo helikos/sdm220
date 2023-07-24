@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MQTT_CONTEXT_H
 #define _MQTT_CONTEXT_H
 
@@ -16,6 +17,7 @@ class MqttContext {
     static uint16_t publishMessage(const char* topic, const char* payload);
     static void connectToMqtt();
     static void stopTimer();
+    static void startTimer();
 
   protected:
    static TimerHandle_t _timerReconect;

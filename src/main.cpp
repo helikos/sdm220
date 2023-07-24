@@ -6,10 +6,13 @@ extern "C" {
 }
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
+#include "configuration.h"
 
 // Include the header for the ModbusClient RTU style
-#include "MqttContext.h"
-#include "wifiContext.h"
+#include "utils/MqttContext.h"
+#include "utils/wifiContext.h"
+#include "utils/Logger.h"
+
 #include "processing/SDM220Processing.h"
 #include "processing/PzemProcessing.h"
 
@@ -17,13 +20,6 @@ extern "C" {
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
 
-const char* ssid   = "*";                   // SSID and ...
-const char* pass   = "*";                   // password for the WiFi network used
-
-const char* mqttServer = "192.168.1.10";    // mqqt server
-const int mqttPort     = 1883;
-const char* mqttUser   = "mqtt";
-const char* mqttPass   = "mqtt";
 
 //const char* mqqtTopicPower  = "powermetter/sdm200/power";
 //const char* mqqtTopicEnergy = "powermetter/sdm200/energy";
@@ -31,12 +27,14 @@ const char* mqttPass   = "mqtt";
 //const char* mqqtTopicError  = "powermetter/sdm200/error";
 //SDM220Processing sdm220Processing;
 
-const char* mqqtTopicPower = "powermetter/pzem/power";
-const char* mqqtTopicError = "powermetter/pzem/error";
-PzemProcessing pzemProcessing;
+// const char* mqqtTopicPower = "powermetter/pzem/power";
+// const char* mqqtTopicError = "powermetter/pzem/error";
+// PzemProcessing pzemProcessing;
 
 WiFiContext wifiContext;
 MqttContext mqttContext;
+Logger logger;
+
 AsyncWebServer server(80);
 
 
@@ -49,8 +47,8 @@ void setup() {
   mqttContext.initializate(mqttServer, mqttPort, mqttUser, mqttPass);
   wifiContext.initializate(mqttContext, ssid, pass);
 
-//  sdm220Processing.initializate(mqttContext, mqqtTopicPower, mqqtTopicEnergy, mqqtTopicTotal, mqqtTopicError);
-  pzemProcessing.initializate(mqttContext, mqqtTopicPower, mqqtTopicError);
+  sdm220Processing.initializate(mqttContext, mqqtTopicPower, mqqtTopicEnergy, mqqtTopicTotal, mqqtTopicError);
+//  pzemProcessing.initializate(mqttContext, mqqtTopicPower, mqqtTopicError);
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", "Hi! I am ESP32.");

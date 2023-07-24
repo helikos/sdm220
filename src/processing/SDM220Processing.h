@@ -1,10 +1,12 @@
+#pragma once
+
 #ifndef _SDM220_PROCESSING_H
 #define _SDM220_PROCESSING_H
 
 #include "ModbusMessage.h"
 #include "ModbusClientRTU.h"
 #include "SDM220TypeDefs.h"
-#include "MqttContext.h"
+#include "utils/MqttContext.h"
 #include "ModbusMqqtProcessing.h"
 
 

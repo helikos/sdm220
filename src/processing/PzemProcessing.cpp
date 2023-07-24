@@ -6,7 +6,7 @@
 
 #include "ModbusMessage.h"
 #include "ModbusClientRTU.h"
-#include "MqttContext.h"
+#include "utils/MqttContext.h"
 #include <ArduinoJson.h>
 
 #include "ModbusMqqtProcessing.h"

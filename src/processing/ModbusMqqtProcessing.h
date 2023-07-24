@@ -1,8 +1,9 @@
+#pragma once
 
 #ifndef _MODBUS_MQTT_PROCESSING_H
 #define _MODBUS_MQTT_PROCESSING_H
 
-#include "MqttContext.h"
+#include "utils/MqttContext.h"
 #include "ModbusClientRTU.h"
 
 class ModbusMqqtProcessing {

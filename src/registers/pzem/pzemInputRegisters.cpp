@@ -2,6 +2,9 @@
 #include "pzemInputRegisters.h"
 #include <ArduinoJson.h>
 #include <stdlib.h>
+#include "utils/Logger.h"
+
+extern Logger logger;
 
 typedef union twoWords
 {
@@ -50,25 +53,25 @@ typedef union twoWords
   }
 
   const char *pzemInputRegister::toString() {
-    Serial.printf("Line to neutral volts %f  V\n", lineToNeutralVolts);
-    Serial.printf("Current               %f  A\n", current);
-    Serial.printf("Active power.         %f  W\n", activePower);
-    Serial.printf("Energy value          %f  Wh\n", energyValue);
-    Serial.printf("Frequency             %f  Hz\n", frequencyValue);
-    Serial.printf("Power factor          %f  \n", powerFactor);
-    Serial.printf("Alarm status          %d  \n", alarmStatus);
+    logger.log(PSTR("Line to neutral volts %f  V"), lineToNeutralVolts);
+    logger.log(PSTR("Current               %f  A"), current);
+    logger.log(PSTR("Active power.         %f  W"), activePower);
+    logger.log(PSTR("Energy value          %f  Wh"), energyValue);
+    logger.log(PSTR("Frequency             %f  Hz"), frequencyValue);
+    logger.log(PSTR("Power factor          %f  "), powerFactor);
+    logger.log(PSTR("Alarm status          %d  "), alarmStatus);
     return "";
   }
 
   String pzemInputRegister::toJson() {
     DynamicJsonDocument doc(1024);
 
-    doc["lineVolts"] = lineToNeutralVolts;
-    doc["current"] = current;
-    doc["activePower"] = activePower;
-    doc["energyValue"] = energyValue;
-    doc["frequencyValue"] = frequencyValue;
-    doc["powerFactor"] = powerFactor;
+    doc[PSTR("lineVolts")] = lineToNeutralVolts;
+    doc[PSTR("current")] = current;
+    doc[PSTR("activePower")] = activePower;
+    doc[PSTR("energyValue")] = energyValue;
+    doc[PSTR("frequencyValue")] = frequencyValue;
+    doc[PSTR("powerFactor")] = powerFactor;
     String output;
     serializeJson(doc, output);
     return output;

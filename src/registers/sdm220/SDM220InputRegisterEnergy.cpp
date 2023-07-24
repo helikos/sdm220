@@ -2,6 +2,7 @@
 #include "ModbusMessage.h"
 #include "SDM220InputRegisterEnergy.h"
 #include <ArduinoJson.h>
+#include "utils/Logger.h"
 
 
 /*
@@ -19,34 +20,36 @@
   float exportReactiveEnergy;    
 */
 
-   SDM220InputRegisterEnergy::SDM220InputRegisterEnergy(ModbusMessage response) {
-    response.get(3, frequency);
-    response.get(7, importActiveEnergy);
-    response.get(11, exportActiveEnergy);
-    response.get(15, importReactiveEnergy);
-    response.get(19, exportReactiveEnergy);
-  }
+extern Logger logger;
 
-  const char *SDM220InputRegisterEnergy::toString() {
-    Serial.printf("\n !!!!!! ENERGY !!!!!!!!!!!!!\n");
-    Serial.printf("Frequency              %f Hz\n", frequency);
-    Serial.printf("Import active energy   %f kwh\n", importActiveEnergy);
-    Serial.printf("Export active energy   %f kwh\n", exportActiveEnergy);
-    Serial.printf("Import reactive energy %f kvarh\n", importReactiveEnergy);
-    Serial.printf("Export reactive energy %f kvarh\n", exportReactiveEnergy);
+SDM220InputRegisterEnergy::SDM220InputRegisterEnergy(ModbusMessage response) {
+  response.get(3, frequency);
+  response.get(7, importActiveEnergy);
+  response.get(11, exportActiveEnergy);
+  response.get(15, importReactiveEnergy);
+  response.get(19, exportReactiveEnergy);
+}
 
-    return "";
-  }
+const char *SDM220InputRegisterEnergy::toString() {
+  logger.log(PSTR("\n !!!!!! ENERGY !!!!!!!!!!!!!\n"));
+  logger.log(PSTR("Frequency              %f Hz"), frequency);
+  logger.log(PSTR("Import active energy   %f kwh"), importActiveEnergy);
+  logger.log(PSTR("Export active energy   %f kwh"), exportActiveEnergy);
+  logger.log(PSTR("Import reactive energy %f kvarh"), importReactiveEnergy);
+  logger.log(PSTR("Export reactive energy %f kvarh"), exportReactiveEnergy);
 
-  String SDM220InputRegisterEnergy::toJson() {
-    DynamicJsonDocument doc(1024);
+  return "";
+}
 
-    doc["frequency"] = frequency;
-    doc["importActiveEnergy"] = importActiveEnergy;
-    doc["exportActiveEnergy"] = exportActiveEnergy;
-    doc["importReactiveEnergy"] = importReactiveEnergy;
-    doc["exportReactiveEnergy"] = exportReactiveEnergy;
-    String output;
-    serializeJson(doc, output);
-    return output;
-  }
+String SDM220InputRegisterEnergy::toJson() {
+  DynamicJsonDocument doc(1024);
+
+  doc[PSTR("frequency")] = frequency;
+  doc[PSTR("importActiveEnergy")] = importActiveEnergy;
+  doc[PSTR("exportActiveEnergy")] = exportActiveEnergy;
+  doc[PSTR("importReactiveEnergy")] = importReactiveEnergy;
+  doc[PSTR("exportReactiveEnergy")] = exportReactiveEnergy;
+  String output;
+  serializeJson(doc, output);
+  return output;
+}

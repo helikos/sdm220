@@ -2,6 +2,9 @@
 #include "ModbusMessage.h"
 #include "SDM220InputRegisterTotal.h"
 #include <ArduinoJson.h>
+#include "utils/Logger.h"
+
+extern Logger logger;
 
 
 /*
@@ -20,18 +23,17 @@
   }
 
   const char *SDM220InputRegisterTotal::toString() {
-    Serial.printf("\n !!!!!! TOTAL !!!!!!!!!!!!!\n");
-    Serial.printf("Total active energy   %f kwh\n", totalActiveEnergy);
-    Serial.printf("Total reactive energy %f kvarh\n", totalReactiveEnergy);
-
+    logger.log(PSTR("\n !!!!!! TOTAL !!!!!!!!!!!!!"));
+    logger.log(PSTR("Total active energy   %f kwh"), totalActiveEnergy);
+    logger.log(PSTR("Total reactive energy %f kvarh"), totalReactiveEnergy);
     return "";
   }
 
   String SDM220InputRegisterTotal::toJson() {
     DynamicJsonDocument doc(1024);
 
-    doc["totalActiveEnergy"] = totalActiveEnergy;
-    doc["totalReactiveEnergy"] = totalReactiveEnergy;
+    doc[PSTR("totalActiveEnergy")] = totalActiveEnergy;
+    doc[PSTR("totalReactiveEnergy")] = totalReactiveEnergy;
     String output;
     serializeJson(doc, output);
     return output;

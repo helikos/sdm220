@@ -1,6 +1,9 @@
 
 #include "SDM220InputRegisterPower.h"
 #include <ArduinoJson.h>
+#include "utils/Logger.h"
+
+extern Logger logger;
 
 //#include "ModbusMessage.h"
 
@@ -43,38 +46,38 @@
 
 */
 
-   SDM220InputRegisterPower::SDM220InputRegisterPower(ModbusMessage response) {
-    response.get(3,  lineToNeutralVolts);
-    response.get(15, current);
-    response.get(27, activePower);
-    response.get(39, apparentPower);
-    response.get(51, reactivePower);
-    response.get(63, powerFactor);
-    response.get(75, phaseAngle);
-  }
+  SDM220InputRegisterPower::SDM220InputRegisterPower(ModbusMessage response) {
+  response.get(3,  lineToNeutralVolts);
+  response.get(15, current);
+  response.get(27, activePower);
+  response.get(39, apparentPower);
+  response.get(51, reactivePower);
+  response.get(63, powerFactor);
+  response.get(75, phaseAngle);
+}
 
-  const char *SDM220InputRegisterPower::toString() {
-    Serial.printf("\n !!!!!! POWER !!!!!!!!!!!!!\n");
-    Serial.printf("Line to neutral volts %f Volts\n", lineToNeutralVolts);
-    Serial.printf("Current               %f Amps\n", current);
-    Serial.printf("Active power.         %f Watts\n", activePower);
-    Serial.printf("Apparent power        %f VoltAmps\n", apparentPower);
-    Serial.printf("Reactive power        %f VAr\n", reactivePower);
-    Serial.printf("Power factor          %f None\n", powerFactor);
-    Serial.printf("Phase angle.          %f Degree\n", phaseAngle);
-    return "";
-  }
+const char *SDM220InputRegisterPower::toString() {
+  logger.log(PSTR("\n !!!!!! POWER !!!!!!!!!!!!!"));
+  logger.log(PSTR("Line to neutral volts %f Volts"), lineToNeutralVolts);
+  logger.log(PSTR("Current               %f Amps"), current);
+  logger.log(PSTR("Active power.         %f Watts"), activePower);
+  logger.log(PSTR("Apparent power        %f VoltAmps"), apparentPower);
+  logger.log(PSTR("Reactive power        %f VAr"), reactivePower);
+  logger.log(PSTR("Power factor          %f None"), powerFactor);
+  logger.log(PSTR("Phase angle.          %f Degree"), phaseAngle);
+  return "";
+}
 
-  String SDM220InputRegisterPower::toJson() {
-    DynamicJsonDocument doc(1024);
+String SDM220InputRegisterPower::toJson() {
+  DynamicJsonDocument doc(1024);
 
-    doc["lineVolts"] = lineToNeutralVolts;
-    doc["current"] = current;
-    doc["activePower"] = activePower;
-    doc["reactivePower"] = reactivePower;
-    doc["powerFactor"] = powerFactor;
-    doc["phaseAngle"] = phaseAngle;
-    String output;
-    serializeJson(doc, output);
-    return output;
-  }
+  doc[PSTR("lineVolts")] = lineToNeutralVolts;
+  doc[PSTR("current")] = current;
+  doc[PSTR("activePower")] = activePower;
+  doc[PSTR("reactivePower")] = reactivePower;
+  doc[PSTR("powerFactor")] = powerFactor;
+  doc[PSTR("phaseAngle")] = phaseAngle;
+  String output;
+  serializeJson(doc, output);
+  return output;
+}
