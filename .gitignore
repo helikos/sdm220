@@ -36,3 +36,11 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+
+security.h
+
+# General macbook
+.DS_Store
+.AppleDouble
+.LSOverride
