@@ -6,26 +6,27 @@
 
 /*
  30071 Frequency                Hz         00 46
- 30073 Import active energy     kwh        00 48 
+ 30073 Import active energy     kwh        00 48
  30075 Export active energy     kwh        00 4A
  30077 Import reactive energy   kvarh      00 4C
- 30079 Export reactive energy   kvarh      00 4E 
+ 30079 Export reactive energy   kvarh      00 4E
  */
 
-class SDM220InputRegisterEnergy : public InputRegisterParameters {
- public:
+class SDM220InputRegisterEnergy : public InputRegisterParameters
+{
+public:
   float frequency;
   float importActiveEnergy;
   float exportActiveEnergy;
   float importReactiveEnergy;
-  float exportReactiveEnergy;    
+  float exportReactiveEnergy;
 
-
+  explicit SDM220InputRegisterEnergy();
   explicit SDM220InputRegisterEnergy(ModbusMessage response);
+  bool isChanged(SDM220InputRegisterEnergy value);
 
   const char *toString();
   String toJson();
-
 };
 
 #endif // _SDM220_INPUT_REGISTER_SECOND_H

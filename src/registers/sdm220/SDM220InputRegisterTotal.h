@@ -15,7 +15,10 @@ class SDM220InputRegisterTotal : public InputRegisterParameters {
   float totalReactiveEnergy;    
 
 
+  explicit SDM220InputRegisterTotal();
   explicit SDM220InputRegisterTotal(ModbusMessage response);
+  bool isChanged(SDM220InputRegisterTotal value);
+
   const char *toString();
   String toJson();
 

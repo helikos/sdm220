@@ -1,42 +1,46 @@
+#pragma once
+
 #ifndef _SDM220_PROCESSING_H
 #define _SDM220_PROCESSING_H
 
 #include "ModbusMessage.h"
 #include "ModbusClientRTU.h"
 #include "SDM220TypeDefs.h"
-#include "MqttContext.h"
+#include "utils/MqttContext.h"
 #include "ModbusMqqtProcessing.h"
+#include "registers/sdm220/SDM220InputRegisterEnergy.h"
+#include "registers/sdm220/SDM220InputRegisterPower.h"
+#include "registers/sdm220/SDM220InputRegisterTotal.h"
 
 
-class SDM220Processing : public ModbusMqqtProcessing {
+class SDM220Processing : public ModbusMqqtProcessing
+{
 
-    public:
+public:
+    static void initializate(MqttContext mqttContext, const char *mqqtTopicPower, const char *mqqtTopicEnergy, const char *mqqtTopicTotal, const char *mqqtTopicError);
 
-     static void initializate(MqttContext mqttContext
-                             ,const char* mqqtTopicPower
-                             ,const char* mqqtTopicEnergy
-                             ,const char* mqqtTopicTotal
-                             ,const char* mqqtTopicError);
-   
-    protected:
+protected:
+    static const char *_mqqtTopicPower;
+    static const char *_mqqtTopicEnergy;
+    static const char *_mqqtTopicTotal;
 
-        static const char* _mqqtTopicPower;
-        static const char* _mqqtTopicEnergy;
-        static const char* _mqqtTopicTotal;
+    static TimerHandle_t _timerPower;
+    static TimerHandle_t _timerEnergy;
+    static TimerHandle_t _timerTotal;
 
-        static TimerHandle_t _timerPower;
-        static TimerHandle_t _timerEnergy;
-        static TimerHandle_t _timerTotal;
- 
-        static void processingOfMessage(ModbusMessage response, RegistersClass registers);
-        static void requestOfMessage(RegistersClass registers);
-        static void handleData(ModbusMessage response, uint32_t token); 
-        static void handleError(Error error, uint32_t token);
+    static void processingOfMessage(ModbusMessage response, RegistersClass registers);
+    static void requestOfMessage(RegistersClass registers);
+    static void handleData(ModbusMessage response, uint32_t token);
+    static void handleError(Error error, uint32_t token);
 
-        static void requestPower();
-        static void requestEnergy();
-        static void requestTotal();
-  
+    static void requestPower();
+    static void requestEnergy();
+    static void requestTotal();
+
+private:
+    static SDM220InputRegisterEnergy previousEnergyValue;
+    static SDM220InputRegisterPower previousPowerValue;
+    static SDM220InputRegisterTotal previousTotalValue;
 };
 
 #endif
