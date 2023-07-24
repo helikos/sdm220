@@ -49,6 +49,5 @@ String SDM220InputRegisterTotal::toJson()
 
 bool SDM220InputRegisterTotal::isChanged(SDM220InputRegisterTotal value)
 {
-  return (abs(value.totalActiveEnergy - totalActiveEnergy) / value.totalActiveEnergy) * 100 > 5
-         || (abs(value.totalReactiveEnergy - totalReactiveEnergy) / value.totalReactiveEnergy) * 100 > 5;
+  return true;
 }

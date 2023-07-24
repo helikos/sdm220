@@ -97,7 +97,7 @@ String SDM220InputRegisterPower::toJson()
 
 bool SDM220InputRegisterPower::isChanged(SDM220InputRegisterPower value)
 {
-  return (abs(value.lineToNeutralVolts - lineToNeutralVolts) / value.lineToNeutralVolts) * 100 > 5
-         || (abs(value.current - current) / value.current) * 100 > 5
-         || (abs(value.activePower - activePower) / value.activePower) * 100 > 5;
+  return (abs(value.lineToNeutralVolts - lineToNeutralVolts) / value.lineToNeutralVolts) * 100 >= 3
+         || (abs(value.current - current) / value.current) * 100 >= 3
+         || (abs(value.activePower - activePower) / value.activePower) * 100 >= 3;
 }

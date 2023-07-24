@@ -52,11 +52,16 @@ void ModbusMqqtProcessing::request(uint32_t token, uint32_t start, uint32_t amou
 };
 
 void ModbusMqqtProcessing::handleData(ModbusMessage response, uint32_t token) {
+
+#ifdef debug    
+#ifdef modbus_Processing
   logger.log(PSTR("ModbusMqqtProcessing::handleData Response: serverID=%d, FC=%d, Token=%08X, length=%d:"),  response.getServerID(), response.getFunctionCode(), token, response.size());
   for (auto& byte : response) {
     logger.log(PSTR("%02X "), byte);
   }
   logger.log(PSTR(""));
+#endif
+#endif
 }
 
 void ModbusMqqtProcessing::handleError(Error error, uint32_t token) {

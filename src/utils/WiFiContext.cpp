@@ -18,7 +18,7 @@ const char *WiFiContext::_pass = NULL;
 
 extern Logger logger;
 
-IPAddress ip(192, 168, 1, 83);
+IPAddress ip(192, 168, 1, 183);
 IPAddress dns(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);

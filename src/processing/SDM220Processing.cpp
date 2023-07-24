@@ -16,9 +16,9 @@ extern "C"
 #include "freertos/timers.h"
 }
 
-#define timeOfPower pdMS_TO_TICKS(2000)  // 2 sec
-#define timeOfEnergy pdMS_TO_TICKS(5000) // 5 sec
-#define timeOfTotal pdMS_TO_TICKS(60000) // 1 minute
+#define timeOfPower pdMS_TO_TICKS(1000)  // 21 sec
+#define timeOfEnergy pdMS_TO_TICKS(120000) // 2 min
+#define timeOfTotal pdMS_TO_TICKS(180000) // 3 minute
 
 extern Logger logger;
 

@@ -49,6 +49,9 @@ void setup() {
   Serial.begin(115200);  
   while (!Serial) {}
   Serial.println("__ OK __");
+  Serial.println("[APP] Free memory: " + String(esp_get_free_heap_size()) + " bytes");
+  logger.logInitialization();
+  Serial.println("[APP] Free memory: " + String(esp_get_free_heap_size()) + " bytes");
 
   mqttContext.initializate(_MQTTSERVER, _MQTTPORT, _MQTTUSER, _MQTTPASS);
   wifiContext.initializate(mqttContext, _SSID, _PASS);
@@ -62,6 +65,7 @@ void setup() {
 
   AsyncElegantOTA.begin(&server);    // Start ElegantOTA
   server.begin();
+
   Serial.println("HTTP server started");
 
 }
