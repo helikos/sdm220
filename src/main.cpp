@@ -23,18 +23,20 @@ extern "C" {
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
 
-
+#ifdef sdm220
 const char* mqqtTopicPower  = "powermetter/sdm200/power";
 const char* mqqtTopicEnergy = "powermetter/sdm200/energy";
 const char* mqqtTopicTotal  = "powermetter/sdm200/total";
 const char* mqqtTopicError  = "powermetter/sdm200/error";
 SDM220Processing sdm220Processing;
+#endif
 
-/*
+
+#ifdef pzem
 const char* mqqtTopicPower = "powermetter/pzem/power";
 const char* mqqtTopicError = "powermetter/pzem/error";
 PzemProcessing pzemProcessing;
-*/
+#endif
 
 
 WiFiContext wifiContext;
@@ -56,9 +58,13 @@ void setup() {
   mqttContext.initializate(_MQTTSERVER, _MQTTPORT, _MQTTUSER, _MQTTPASS);
   wifiContext.initializate(mqttContext, _SSID, _PASS);
 
+#ifdef sdm220
   sdm220Processing.initializate(mqttContext, mqqtTopicPower, mqqtTopicEnergy, mqqtTopicTotal, mqqtTopicError);
-//  pzemProcessing.initializate(mqttContext, mqqtTopicPower, mqqtTopicError);
+#endif
 
+#ifdef pzem
+  pzemProcessing.initializate(mqttContext, mqqtTopicPower, mqqtTopicError);
+#endif
 
   server.on("/log", HTTP_GET, Logger::publishLog);
   server.on("/memory", HTTP_GET, getFreeHeapSize);

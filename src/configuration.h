@@ -12,6 +12,9 @@
 // #define modbus_Processing
 #define isPrint2Serial
 
+#define sdm220
+// #define pzem
+
 
 // #define configTIMER_QUEUE_LENGTH 20
 
