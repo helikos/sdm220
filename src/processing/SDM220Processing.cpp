@@ -16,9 +16,9 @@ extern "C"
 #include "freertos/timers.h"
 }
 
-#define timeOfPower pdMS_TO_TICKS(1000)  // 21 sec
+#define timeOfPower pdMS_TO_TICKS(1000)    // 1 sec
 #define timeOfEnergy pdMS_TO_TICKS(120000) // 2 min
-#define timeOfTotal pdMS_TO_TICKS(180000) // 3 minute
+#define timeOfTotal pdMS_TO_TICKS(180000)  // 3 minute
 
 extern Logger logger;
 
@@ -66,56 +66,39 @@ void SDM220Processing::requestTotal()
 void SDM220Processing::processingOfMessage(ModbusMessage response, RegistersClass registers)
 {
   logger.log(PSTR("SDM220Processing::processingOfMessage token %08X"), (uint32_t)registers);
-
-  switch (registers)
-  {
-  case thePower:
-  {
-    SDM220InputRegisterPower power = SDM220InputRegisterPower(response);
-    logger.log(power.toJson().c_str());
-    if (previousPowerValue.activePower != -1 && power.isChanged(previousPowerValue))
-    {
-      _mqttContext.publishMessage(_mqqtTopicPower, power.toJson().c_str());
+  switch (registers) {
+    case thePower: {
+      SDM220InputRegisterPower power = SDM220InputRegisterPower(response);
+      logger.log(power.toJson().c_str());
+      if (previousPowerValue.activePower != -1 && power.isChanged(previousPowerValue))
+        _mqttContext.publishMessage(_mqqtTopicPower, power.toJson().c_str());
+      previousPowerValue = power;
+//      if (xTimerIsTimerActive(_timerPower) == pdFALSE)
+        xTimerStart(_timerPower, 0);
     }
-    previousPowerValue = power;
-    if (xTimerIsTimerActive(_timerPower) == pdFALSE)
-    {
-      xTimerStart(_timerPower, 0);
-    }
-  }
-  break;
-  case theEnergy:
-  {
-    SDM220InputRegisterEnergy energy = SDM220InputRegisterEnergy(response);
-    logger.log(energy.toJson().c_str());
-    if (previousEnergyValue.exportActiveEnergy != -1 && energy.isChanged(previousEnergyValue))
-    {
-      _mqttContext.publishMessage(_mqqtTopicEnergy, energy.toJson().c_str());
-    }
-    previousEnergyValue = energy;
-    if (xTimerIsTimerActive(_timerEnergy) == pdFALSE)
-    {
+    break;
+    case theEnergy: {
+      SDM220InputRegisterEnergy energy = SDM220InputRegisterEnergy(response);
+      logger.log(energy.toJson().c_str());
+      if (previousEnergyValue.exportActiveEnergy != -1 && energy.isChanged(previousEnergyValue))
+        _mqttContext.publishMessage(_mqqtTopicEnergy, energy.toJson().c_str());
+      previousEnergyValue = energy;
+//      if (xTimerIsTimerActive(_timerEnergy) == pdFALSE)
       xTimerStart(_timerEnergy, 0);
     }
-  }
-  break;
-  case theTotal:
-  {
-    SDM220InputRegisterTotal total = SDM220InputRegisterTotal(response);
-    logger.log(total.toJson().c_str());
-    if (previousTotalValue.totalActiveEnergy != -1 && total.isChanged(previousTotalValue))
-    {
-      _mqttContext.publishMessage(_mqqtTopicTotal, total.toJson().c_str());
+    break;
+    case theTotal: {
+      SDM220InputRegisterTotal total = SDM220InputRegisterTotal(response);
+      logger.log(total.toJson().c_str());
+      if (previousTotalValue.totalActiveEnergy != -1 && total.isChanged(previousTotalValue))
+        _mqttContext.publishMessage(_mqqtTopicTotal, total.toJson().c_str());
+      previousTotalValue = total;
+//      if (xTimerIsTimerActive(_timerTotal) == pdFALSE)
+        xTimerStart(_timerTotal, 0);
     }
-    previousTotalValue = total;
-    if (xTimerIsTimerActive(_timerTotal) == pdFALSE)
-    {
-      xTimerStart(_timerTotal, 0);
-    }
-  }
-  break;
-  default:
-    logger.log(PSTR("!!!!! SDM220Processing::processingOfMessage unknown token  %08X"), (uint32_t)registers);
+    break;
+    default:
+      logger.log(PSTR("!!!!! SDM220Processing::processingOfMessage unknown token  %08X"), (uint32_t)registers);
   };
 };
 
@@ -148,35 +131,23 @@ void SDM220Processing::handleData(ModbusMessage response, uint32_t token)
 void SDM220Processing::handleError(Error error, uint32_t token)
 {
   ModbusMqqtProcessing::handleError(error, token);
+  logger.log(PSTR("SDM220Processing::handleError token %08X"), (uint32_t)token);
 
   RegistersClass registers = (RegistersClass)token;
-  switch (registers)
-  {
-  case thePower:
-  {
-    if (xTimerIsTimerActive(_timerPower) == pdFALSE)
-    {
+  switch (registers) {
+    case thePower: {
       xTimerStart(_timerPower, 0);
     }
-  }
-  break;
-  case theEnergy:
-  {
-    if (xTimerIsTimerActive(_timerEnergy) == pdFALSE)
-    {
+    break;
+    case theEnergy: {
       xTimerStart(_timerEnergy, 0);
     }
-  }
-  break;
-  case theTotal:
-  {
-    if (xTimerIsTimerActive(_timerTotal) == pdFALSE)
-    {
+    break;
+    case theTotal: {
       xTimerStart(_timerTotal, 0);
     }
-  }
-  break;
-  default:
+    break;
+    default:
     logger.log(PSTR("SDM220Processing::handleError unknown token %08X"), (uint32_t)token);
   };
 }
