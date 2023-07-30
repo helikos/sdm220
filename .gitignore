@@ -1,3 +1,9 @@
+# General macbook
+.DS_Store
+*.DS_Store
+.AppleDouble
+.LSOverride
+
 # Prerequisites
 *.d
 
@@ -40,8 +46,3 @@
 
 security.h
 
-# General macbook
-.DS_Store
-.AppleDouble
-.LSOverride
-.DS_Store
