@@ -172,8 +172,21 @@ uint16_t MqttContext::publishMessage(const char* topic, const char* payload) {
   logger.log(PSTR("%s"), payload);
 #endif
 #endif
-  if (_mqttClient.connected())
-    return _mqttClient.publish(topic, 2, true, payload);
-  else 
+  if (_mqttClient.connected()) {
+    auto ret = _mqttClient.publish(topic, 2, true, payload);
+#ifdef debug    
+#ifdef debug_mqtt
+  logger.log(PSTR("MqttContext::publishMessage: return:%d"), ret);
+#endif
+#endif
+    return ret;
+  }
+  else {
+#ifdef debug    
+#ifdef debug_mqtt
+  logger.log(PSTR("MqttContext::publishMessage: not connected:%s"), topic);
+#endif
+#endif
    return 0;
+  }
 }

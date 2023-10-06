@@ -28,5 +28,8 @@ void getFreeHeapSize(AsyncWebServerRequest *request) {
 	status += "Free heap memory size is ";
 	status += String(esp_get_free_heap_size());
 	status += " bytes \n";
+	status += "getMaxAllocHeap size is ";
+	status += String(ESP.getMaxAllocHeap());
+	status += " bytes \n";
     request->send(200, "text/plain", status);
 }

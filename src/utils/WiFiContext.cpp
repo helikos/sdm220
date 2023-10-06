@@ -24,7 +24,6 @@ IPAddress ip(192, 168, 1, 183);
 #ifdef pzem
 IPAddress ip(192, 168, 1, 182);
 #endif
-
 IPAddress dns(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
@@ -40,6 +39,7 @@ void WiFiContext::initializate(MqttContext mqttContext, const char *ssid, const 
 
     WiFi.onEvent(WiFiEvent);
     WiFi.mode(WIFI_STA);
+    WiFi.config(ip, gateway, subnet, dns);
     connectToWifi();
     logger.log(PSTR("WiFiContext::initializate completed"));
 
@@ -48,8 +48,8 @@ void WiFiContext::initializate(MqttContext mqttContext, const char *ssid, const 
 void WiFiContext::connectToWifi()
 {
     logger.log(PSTR("Connecting to Wi-Fi..."));
-    WiFi.config(ip, gateway, subnet, dns);
     WiFi.begin(_ssid, _pass);
+    delay(1000);
 }
 
 void WiFiContext::stopTimer()
