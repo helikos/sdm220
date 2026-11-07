@@ -6,6 +6,7 @@
 #include "ModbusClientRTU.h"
 #include "utils/MqttContext.h"
 #include "ModbusMqqtProcessing.h"
+#include "PublishGate.h"
 #include "registers/pzem/pzemInputRegisters.h"
 
 class PzemProcessing : public ModbusMqqtProcessing{
@@ -20,10 +21,11 @@ class PzemProcessing : public ModbusMqqtProcessing{
 
         static const char* _mqqtTopic;
         static TimerHandle_t _timer;
-        static pzemInputRegister previousValue;
+        static pzemInputRegister _lastPublishedValue;
+        static PublishGate _gate;
 
-        static void request();
-        static void requestOfMessage();
+        static void onPollTimer(TimerHandle_t timer);
+        static bool requestOfMessage();
 
         static void processingOfMessage(ModbusMessage response);
 

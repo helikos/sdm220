@@ -2,7 +2,9 @@
 #include "ModbusMessage.h"
 #include "SDM220InputRegisterEnergy.h"
 #include <ArduinoJson.h>
+#include "configuration.h"
 #include "utils/Logger.h"
+#include "utils/commonFunctions.h"
 
 
 /*
@@ -63,7 +65,11 @@ String SDM220InputRegisterEnergy::toJson() {
   return output;
 }
 
-bool SDM220InputRegisterEnergy::isChanged(SDM220InputRegisterEnergy value)
+bool SDM220InputRegisterEnergy::isChanged(const SDM220InputRegisterEnergy &value) const
 {
-  return true;
+  return isSignificantChange(frequency, value.frequency, deadbandHz, deadbandRelPercent)
+         || isSignificantChange(importActiveEnergy, value.importActiveEnergy, deadbandKwh, deadbandRelPercent)
+         || isSignificantChange(exportActiveEnergy, value.exportActiveEnergy, deadbandKwh, deadbandRelPercent)
+         || isSignificantChange(importReactiveEnergy, value.importReactiveEnergy, deadbandKvarh, deadbandRelPercent)
+         || isSignificantChange(exportReactiveEnergy, value.exportReactiveEnergy, deadbandKvarh, deadbandRelPercent);
 }

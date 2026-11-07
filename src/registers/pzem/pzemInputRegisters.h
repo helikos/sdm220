@@ -27,7 +27,7 @@ public:
 
   explicit pzemInputRegister();
   explicit pzemInputRegister(ModbusMessage response);
-  bool isChanged(pzemInputRegister value);
+  bool isChanged(const pzemInputRegister &value) const;
 
   const char *toString();
   String toJson();

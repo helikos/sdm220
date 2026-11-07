@@ -17,7 +17,7 @@ class SDM220InputRegisterTotal : public InputRegisterParameters {
 
   explicit SDM220InputRegisterTotal();
   explicit SDM220InputRegisterTotal(ModbusMessage response);
-  bool isChanged(SDM220InputRegisterTotal value);
+  bool isChanged(const SDM220InputRegisterTotal &value) const;
 
   const char *toString();
   String toJson();

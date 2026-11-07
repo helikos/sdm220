@@ -2,7 +2,9 @@
 #include "pzemInputRegisters.h"
 #include <ArduinoJson.h>
 #include <stdlib.h>
+#include "configuration.h"
 #include "utils/Logger.h"
+#include "utils/commonFunctions.h"
 using namespace std;
 
 extern Logger logger;
@@ -75,12 +77,19 @@ String pzemInputRegister::toJson()
   doc[PSTR("energyValue")] = energyValue;
   doc[PSTR("frequencyValue")] = frequencyValue;
   doc[PSTR("powerFactor")] = powerFactor;
+  doc[PSTR("alarmStatus")] = alarmStatus;
   String output;
   serializeJson(doc, output);
   return output;
 }
 
-bool pzemInputRegister::isChanged(pzemInputRegister value) 
+bool pzemInputRegister::isChanged(const pzemInputRegister &value) const
 {
-  return (abs(value.current - current) / value.current) * 100 > 5;
+  return alarmStatus != value.alarmStatus
+         || isSignificantChange(lineToNeutralVolts, value.lineToNeutralVolts, deadbandVolts, deadbandRelPercent)
+         || isSignificantChange(current, value.current, deadbandAmps, deadbandRelPercent)
+         || isSignificantChange(activePower, value.activePower, deadbandWatts, deadbandRelPercent)
+         || isSignificantChange(energyValue, value.energyValue, deadbandKwh, deadbandRelPercent)
+         || isSignificantChange(frequencyValue, value.frequencyValue, deadbandHz, deadbandRelPercent)
+         || isSignificantChange(powerFactor, value.powerFactor, deadbandPowerFactor, deadbandRelPercent);
 }

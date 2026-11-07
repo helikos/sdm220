@@ -12,7 +12,7 @@ extern "C" {
 
 // Include the header for the ModbusClient RTU style
 #include "utils/MqttContext.h"
-#include "utils/wifiContext.h"
+#include "utils/WiFiContext.h"
 #include "utils/Logger.h"
 #include "utils/commonFunctions.h"
 
@@ -77,4 +77,10 @@ void setup() {
 }
 
 void loop(void) {
+  // Таск loop() больше не крутится вхолостую на приоритете 1.
+  // supervise() перезагружает плату, если брокер недоступен дольше
+  // mqttMaxOfflineMs: раньше при вечно недоступном MQTT или WiFi
+  // устройство висело без всякого восстановления.
+  MqttContext::supervise();
+  delay(1000);
 }

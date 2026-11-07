@@ -19,6 +19,7 @@ class WiFiContext {
     static const char* _pass;
     static void stopTimer();
     static void startTimer();
+    static void onReconnectTimer(TimerHandle_t timer);
     static const char* describeWiFiEvent(WiFiEvent_t event);
 
   public:

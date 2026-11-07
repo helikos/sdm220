@@ -43,21 +43,23 @@ String ModbusMqqtProcessing::errorToJson(Error error) {
   return output;
 }
 
-void ModbusMqqtProcessing::request(uint32_t token, uint32_t start, uint32_t amount) {
+bool ModbusMqqtProcessing::request(uint32_t token, uint32_t start, uint32_t amount) {
   Error err = _mb.addRequest(token, 1, READ_INPUT_REGISTER, start, amount);
-  if (err!=SUCCESS) {
+  if (err != SUCCESS) {
     ModbusError e(err);
-    logger.log(PSTR("ModbusMqqtProcessing::request Error creating request: %02X - %s"), (int)e, (const char *)e);
+    logger.log(PSTR("ModbusMqqtProcessing::request Error creating request: %02X - %s"), (unsigned)(int)e, (const char *)e);
+    return false;
   }
+  return true;
 };
 
 void ModbusMqqtProcessing::handleData(ModbusMessage response, uint32_t token) {
 
 #ifdef debug    
 #ifdef modbus_Processing
-  logger.log(PSTR("ModbusMqqtProcessing::handleData Response: serverID=%d, FC=%d, Token=%08X, length=%d:"),  response.getServerID(), response.getFunctionCode(), token, response.size());
+  logger.log(PSTR("ModbusMqqtProcessing::handleData Response: serverID=%d, FC=%d, Token=%08X, length=%u:"),  response.getServerID(), response.getFunctionCode(), (unsigned)token, (unsigned)response.size());
   for (auto& byte : response) {
-    logger.log(PSTR("%02X "), byte);
+    logger.log(PSTR("%02X "), (unsigned)byte);
   }
   logger.log(PSTR(""));
 #endif
@@ -67,6 +69,6 @@ void ModbusMqqtProcessing::handleData(ModbusMessage response, uint32_t token) {
 void ModbusMqqtProcessing::handleError(Error error, uint32_t token) {
   // ModbusError wraps the error code and provides a readable error message for it
   ModbusError me(error);
-  logger.log(PSTR("SDM220Processing::handleError Error response: token=%08X %02X - %s"), token, (int)me, (const char *)me);
+  logger.log(PSTR("ModbusMqqtProcessing::handleError Error response: token=%08X %02X - %s"), (unsigned)token, (unsigned)(int)me, (const char *)me);
   _mqttContext.publishMessage(_mqqtTopicError, errorToJson(error).c_str());
 }

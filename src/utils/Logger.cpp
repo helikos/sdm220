@@ -1,45 +1,58 @@
 #include "Logger.h"
 #include "configuration.h"
 #include <Arduino.h>
-#include <forward_list> 
 #include <cstdarg>
 
-char* Logger::buffer[sizeOfLog];
-u_int32_t Logger::position = 0;
-u_int32_t Logger::size = 0;
+char Logger::buffer[sizeOfLog][msgLength];
+uint32_t Logger::position = 0;
+uint32_t Logger::size = 0;
+SemaphoreHandle_t Logger::mutex = NULL;
 
-#ifdef isPrint2Serial
-    char* Logger::serial_msg = new char[1024];
-#endif    
+void Logger::lock() {
+    if (mutex != NULL) {
+        xSemaphoreTake(mutex, portMAX_DELAY);
+    }
+}
 
+void Logger::unlock() {
+    if (mutex != NULL) {
+        xSemaphoreGive(mutex);
+    }
+}
 
 size_t Logger::log(const char *format, ...) {
 
-    va_list arg;
-    va_list copy;
-    va_start(arg, format);
-    va_copy(copy, arg);
+    Logger::lock();
 
-    char* msg = Logger::buffer[Logger::position];
-    int len = vsnprintf(msg, msgLength, format, copy);
-#ifdef isPrint2Serial
-    vsnprintf(Logger::serial_msg, 1024, format, copy);
-    Serial.println(Logger::serial_msg);
-#endif    
-    va_end(copy);
-    if(len < 0) {
-        va_end(arg);
+    char *msg = Logger::buffer[Logger::position];
+
+    va_list arg;
+    va_start(arg, format);
+    int len = vsnprintf(msg, msgLength, format, arg);
+    va_end(arg);
+
+    if (len < 0) {
+        msg[0] = '\0';
+        Logger::unlock();
         return 0;
     }
-    va_end(arg);
+
+#ifdef isPrint2Serial
+    // Печатаем ту же строку, что легла в кольцевой буфер: отдельный общий
+    // буфер под Serial был источником гонки между тасками.
+    Serial.println(msg);
+#endif
+
     Logger::position = Logger::addPosition(Logger::position);
     if (Logger::size < sizeOfLog) {
         Logger::size++;
     }
-    return len;
+
+    Logger::unlock();
+    return (size_t)len;
 }
 
-u_int32_t Logger::addPosition(u_int32_t pos) {
+uint32_t Logger::addPosition(uint32_t pos) {
     if (pos < sizeOfLog - 1) {
         return pos + 1;
     } else {
@@ -48,35 +61,39 @@ u_int32_t Logger::addPosition(u_int32_t pos) {
 }
 
 void Logger::printBuffer() {
-    u_int32_t pos = 0;
+    Logger::lock();
+    uint32_t pos = 0;
     if (Logger::size >= sizeOfLog)
         pos = Logger::position;
-    for (u_int32_t i = 0; i < Logger::size; i++) {
+    for (uint32_t i = 0; i < Logger::size; i++) {
         Serial.println(Logger::buffer[pos]);
         pos = Logger::addPosition(pos);
     }
+    Logger::unlock();
 }
 
-    
+
 void Logger::logInitialization() {
     Serial.println("Logger::logInitialization start");
+    // Буфер лежит в .bss, аллокаций нет: ни фрагментации, ни зависимости
+    // от порядка инициализации глобальных объектов.
+    Logger::mutex = xSemaphoreCreateMutex();
     Logger::position = 0;
     Logger::size = 0;
-    for (u_int32_t i = 0; i < sizeOfLog; i++) {
-        Logger::buffer[i] = new char[msgLength];
-    }
     Serial.println("Logger::logInitialization completed");
 }
 
 void Logger::publishLog(AsyncWebServerRequest *request) {
     String status = "Hi! I am sdm220 electricity sensor.\n";
-    u_int32_t pos = 0;
+    Logger::lock();
+    uint32_t pos = 0;
     if (Logger::size >= sizeOfLog)
         pos = Logger::position;
-    for (u_int32_t i = 0; i < Logger::size; i++) {
-        status += String(Logger::buffer[pos])+"\n";
+    for (uint32_t i = 0; i < Logger::size; i++) {
+        status += String(Logger::buffer[pos]) + "\n";
         pos = Logger::addPosition(pos);
     }
+    Logger::unlock();
     request->send(200, "text/plain", status);
 
 }

@@ -27,7 +27,7 @@ public:
 
   explicit SDM220InputRegisterPower();
   explicit SDM220InputRegisterPower(ModbusMessage response);
-  bool isChanged(SDM220InputRegisterPower value);
+  bool isChanged(const SDM220InputRegisterPower &value) const;
 
   const char *toString();
   String toJson();

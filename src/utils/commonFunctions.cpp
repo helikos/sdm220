@@ -1,6 +1,7 @@
 
 #include <Arduino.h>
 #include "commonFunctions.h"
+#include <cmath>
 
 #include <string>
 #include <iostream>
@@ -32,4 +33,13 @@ void getFreeHeapSize(AsyncWebServerRequest *request) {
 	status += String(ESP.getMaxAllocHeap());
 	status += " bytes \n";
     request->send(200, "text/plain", status);
+}
+
+bool isSignificantChange(float current, float previous, float absTolerance, float relPercent)
+{
+	if (std::isnan(current) || std::isnan(previous))
+		return true;
+
+	const float threshold = fmaxf(absTolerance, fabsf(previous) * relPercent / 100.0f);
+	return fabsf(current - previous) >= threshold;
 }

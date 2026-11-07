@@ -1,7 +1,9 @@
 
 #include "SDM220InputRegisterPower.h"
 #include <ArduinoJson.h>
+#include "configuration.h"
 #include "utils/Logger.h"
+#include "utils/commonFunctions.h"
 
 extern Logger logger;
 
@@ -87,6 +89,7 @@ String SDM220InputRegisterPower::toJson()
   doc[PSTR("lineVolts")] = lineToNeutralVolts;
   doc[PSTR("current")] = current;
   doc[PSTR("activePower")] = activePower;
+  doc[PSTR("apparentPower")] = apparentPower;
   doc[PSTR("reactivePower")] = reactivePower;
   doc[PSTR("powerFactor")] = powerFactor;
   doc[PSTR("phaseAngle")] = phaseAngle;
@@ -95,9 +98,13 @@ String SDM220InputRegisterPower::toJson()
   return output;
 }
 
-bool SDM220InputRegisterPower::isChanged(SDM220InputRegisterPower value)
+bool SDM220InputRegisterPower::isChanged(const SDM220InputRegisterPower &value) const
 {
-  return (abs(value.lineToNeutralVolts - lineToNeutralVolts) / value.lineToNeutralVolts) * 100 >= 3
-         || (abs(value.current - current) / value.current) * 100 >= 3
-         || (abs(value.activePower - activePower) / value.activePower) * 100 >= 3;
+  return isSignificantChange(lineToNeutralVolts, value.lineToNeutralVolts, deadbandVolts, deadbandRelPercent)
+         || isSignificantChange(current, value.current, deadbandAmps, deadbandRelPercent)
+         || isSignificantChange(activePower, value.activePower, deadbandWatts, deadbandRelPercent)
+         || isSignificantChange(apparentPower, value.apparentPower, deadbandVa, deadbandRelPercent)
+         || isSignificantChange(reactivePower, value.reactivePower, deadbandVar, deadbandRelPercent)
+         || isSignificantChange(powerFactor, value.powerFactor, deadbandPowerFactor, deadbandRelPercent)
+         || isSignificantChange(phaseAngle, value.phaseAngle, deadbandDegrees, deadbandRelPercent);
 }

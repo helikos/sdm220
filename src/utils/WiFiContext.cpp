@@ -32,7 +32,7 @@ IPAddress subnet(255, 255, 255, 0);
 void WiFiContext::initializate(MqttContext mqttContext, const char *ssid, const char *pass)
 {
     logger.log(PSTR("WiFiContext::initializate started"));
-    _wifiReconnectTimer = xTimerCreate("wifiTimer", wifiTimeOfReconect, pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
+    _wifiReconnectTimer = xTimerCreate("wifiTimer", wifiTimeOfReconect, pdFALSE, (void *)0, onReconnectTimer);
     _mqttContext = mqttContext;
     _ssid = ssid;
     _pass = pass;
@@ -49,7 +49,15 @@ void WiFiContext::connectToWifi()
 {
     logger.log(PSTR("Connecting to Wi-Fi..."));
     WiFi.begin(_ssid, _pass);
-    delay(1000);
+    // Никакого delay(): функция работает колбэком программного таймера,
+    // а таск службы таймеров один на все таймеры проекта - секундная
+    // задержка здесь останавливала и опрос счётчика, и реконнект MQTT.
+}
+
+void WiFiContext::onReconnectTimer(TimerHandle_t timer)
+{
+    (void)timer;
+    WiFiContext::connectToWifi();
 }
 
 void WiFiContext::stopTimer()
@@ -77,7 +85,7 @@ void WiFiContext::WiFiEvent(WiFiEvent_t event)
     {
     case SYSTEM_EVENT_STA_GOT_IP:
         logger.log(PSTR("WiFiContext::WiFiEvent WiFi connected"));                            //  "was connnected to WiFi"
-        logger.log(PSTR("WiFiContext::WiFiEvent IP address: %s"), WiFi.localIP().toString()); //  "IP: "
+        logger.log(PSTR("WiFiContext::WiFiEvent IP address: %s"), WiFi.localIP().toString().c_str());
         WiFiContext::stopTimer();
         _mqttContext.connectToMqtt();
         break;

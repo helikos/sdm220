@@ -2,7 +2,9 @@
 #include "ModbusMessage.h"
 #include "SDM220InputRegisterTotal.h"
 #include <ArduinoJson.h>
+#include "configuration.h"
 #include "utils/Logger.h"
+#include "utils/commonFunctions.h"
 
 extern Logger logger;
 
@@ -47,7 +49,8 @@ String SDM220InputRegisterTotal::toJson()
   return output;
 }
 
-bool SDM220InputRegisterTotal::isChanged(SDM220InputRegisterTotal value)
+bool SDM220InputRegisterTotal::isChanged(const SDM220InputRegisterTotal &value) const
 {
-  return true;
+  return isSignificantChange(totalActiveEnergy, value.totalActiveEnergy, deadbandKwh, deadbandRelPercent)
+         || isSignificantChange(totalReactiveEnergy, value.totalReactiveEnergy, deadbandKvarh, deadbandRelPercent);
 }

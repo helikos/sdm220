@@ -8,6 +8,7 @@
 #include "SDM220TypeDefs.h"
 #include "utils/MqttContext.h"
 #include "ModbusMqqtProcessing.h"
+#include "PublishGate.h"
 #include "registers/sdm220/SDM220InputRegisterEnergy.h"
 #include "registers/sdm220/SDM220InputRegisterPower.h"
 #include "registers/sdm220/SDM220InputRegisterTotal.h"
@@ -29,18 +30,28 @@ protected:
     static TimerHandle_t _timerTotal;
 
     static void processingOfMessage(ModbusMessage response, RegistersClass registers);
-    static void requestOfMessage(RegistersClass registers);
+    static bool requestOfMessage(RegistersClass registers);
     static void handleData(ModbusMessage response, uint32_t token);
     static void handleError(Error error, uint32_t token);
 
-    static void requestPower();
-    static void requestEnergy();
-    static void requestTotal();
+    /* Один колбэк на все три таймера: какие регистры опрашивать, лежит
+       в timer ID. Раньше три void()-функции приводились
+       reinterpret_cast'ом к TimerCallbackFunction_t. */
+    static void onPollTimer(TimerHandle_t timer);
+    static TimerHandle_t timerFor(RegistersClass registers);
+    static void requestOrRetry(RegistersClass registers);
 
 private:
-    static SDM220InputRegisterEnergy previousEnergyValue;
-    static SDM220InputRegisterPower previousPowerValue;
-    static SDM220InputRegisterTotal previousTotalValue;
+    // Сравниваем с последним ОПУБЛИКОВАННЫМ значением, а не с последним
+    // прочитанным: иначе медленный дрейф в пределах мёртвой зоны
+    // не публикуется никогда.
+    static SDM220InputRegisterEnergy _lastPublishedEnergy;
+    static SDM220InputRegisterPower _lastPublishedPower;
+    static SDM220InputRegisterTotal _lastPublishedTotal;
+
+    static PublishGate _powerGate;
+    static PublishGate _energyGate;
+    static PublishGate _totalGate;
 };
 
 #endif

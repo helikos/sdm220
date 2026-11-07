@@ -19,7 +19,10 @@ class ModbusMqqtProcessing {
                             ,MBOnError onErrorHandler
                             ,const char* mqqtTopicError);
     static String errorToJson(Error error);
-    static void request(uint32_t token, uint32_t start, uint32_t amount);
+    /* false = запрос не принят клиентом eModbus. Ни onData, ни onError
+       в этом случае не придут, поэтому таймер опроса обязан
+       перезапустить вызывающий. */
+    static bool request(uint32_t token, uint32_t start, uint32_t amount);
     static void handleData(ModbusMessage response, uint32_t token);
     static void handleError(Error error, uint32_t token);
 
