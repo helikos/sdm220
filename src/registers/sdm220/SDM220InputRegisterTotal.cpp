@@ -3,10 +3,8 @@
 #include "SDM220InputRegisterTotal.h"
 #include <ArduinoJson.h>
 #include "configuration.h"
-#include "utils/Logger.h"
 #include "utils/commonFunctions.h"
 
-extern Logger logger;
 
 /*
  30343 Total active energy      kwh        01 56
@@ -24,23 +22,16 @@ SDM220InputRegisterTotal::SDM220InputRegisterTotal()
   totalReactiveEnergy = -1.0;    
 }
 
-SDM220InputRegisterTotal::SDM220InputRegisterTotal(ModbusMessage response)
+SDM220InputRegisterTotal::SDM220InputRegisterTotal(const ModbusMessage &response)
 {
   response.get(3, totalActiveEnergy);
   response.get(7, totalReactiveEnergy);
 }
 
-const char *SDM220InputRegisterTotal::toString()
-{
-  logger.log(PSTR("\n !!!!!! TOTAL !!!!!!!!!!!!!"));
-  logger.log(PSTR("Total active energy   %f kwh"), totalActiveEnergy);
-  logger.log(PSTR("Total reactive energy %f kvarh"), totalReactiveEnergy);
-  return "";
-}
 
-String SDM220InputRegisterTotal::toJson()
+String SDM220InputRegisterTotal::toJson() const
 {
-  DynamicJsonDocument doc(1024);
+  JsonDocument doc;
 
   doc[PSTR("totalActiveEnergy")] = totalActiveEnergy;
   doc[PSTR("totalReactiveEnergy")] = totalReactiveEnergy;

@@ -1,8 +1,8 @@
 #ifndef _PZEM_INPUT_REGISTERS_H
 #define _PZEM_INPUT_REGISTERS_H
 
+#include <Arduino.h>
 #include "ModbusMessage.h"
-#include "../inputRegisterParameters.h"
 
 /*
  30001 Line to neutral volts.   Volts      00 00
@@ -14,7 +14,7 @@
  30037 Phase angle.             Degree     00 24
 */
 
-class pzemInputRegister : public InputRegisterParameters
+class pzemInputRegister
 {
 public:
   float lineToNeutralVolts;
@@ -26,11 +26,10 @@ public:
   uint32_t alarmStatus;
 
   explicit pzemInputRegister();
-  explicit pzemInputRegister(ModbusMessage response);
+  explicit pzemInputRegister(const ModbusMessage &response);
   bool isChanged(const pzemInputRegister &value) const;
 
-  const char *toString();
-  String toJson();
+  String toJson() const;
 };
 
 #endif // _SDM220_INPUT_REGISTER_FIRST_H

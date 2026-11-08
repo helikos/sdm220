@@ -3,11 +3,9 @@
 #include <ArduinoJson.h>
 #include <stdlib.h>
 #include "configuration.h"
-#include "utils/Logger.h"
 #include "utils/commonFunctions.h"
 using namespace std;
 
-extern Logger logger;
 
 typedef union twoWords
 {
@@ -26,7 +24,7 @@ pzemInputRegister::pzemInputRegister()
   alarmStatus = 0;
 }
 
-pzemInputRegister::pzemInputRegister(ModbusMessage response)
+pzemInputRegister::pzemInputRegister(const ModbusMessage &response)
 {
   uint16_t _16;
   twoWords _twoWords;
@@ -55,21 +53,10 @@ pzemInputRegister::pzemInputRegister(ModbusMessage response)
   response.get(21, alarmStatus);
 }
 
-const char *pzemInputRegister::toString()
-{
-  logger.log(PSTR("Line to neutral volts %f  V"), lineToNeutralVolts);
-  logger.log(PSTR("Current               %f  A"), current);
-  logger.log(PSTR("Active power.         %f  W"), activePower);
-  logger.log(PSTR("Energy value          %f  Wh"), energyValue);
-  logger.log(PSTR("Frequency             %f  Hz"), frequencyValue);
-  logger.log(PSTR("Power factor          %f  "), powerFactor);
-  logger.log(PSTR("Alarm status          %d  "), alarmStatus);
-  return "";
-}
 
-String pzemInputRegister::toJson()
+String pzemInputRegister::toJson() const
 {
-  DynamicJsonDocument doc(1024);
+  JsonDocument doc;
 
   doc[PSTR("lineVolts")] = lineToNeutralVolts;
   doc[PSTR("current")] = current;

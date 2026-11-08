@@ -3,58 +3,68 @@
 #define _MQTT_CONTEXT_H
 
 #include <AsyncMqttClient.h>
+#include "IPublisher.h"
 extern "C" {
   #include "freertos/FreeRTOS.h"
   #include "freertos/timers.h"
 }
 
-class MqttContext {
+/* Параметры подключения одной структурой: раньше initializate принимала
+   четыре отдельных аргумента, и каждый новый параметр сессии удлинял
+   сигнатуру. availabilityTopic == NULL - LWT не используется. */
+struct MqttSettings
+{
+    const char *server;
+    int port;
+    const char *user;
+    const char *pass;
+    const char *clientId;           // NULL = сгенерированный библиотекой
+    const char *availabilityTopic;  // NULL = без Last Will
+    uint16_t keepAliveSeconds;
+};
 
+/* Обычный класс с полями, а не набор статиков: AsyncMqttClient теперь
+   принадлежит экземпляру, а колбэки привязаны лямбдами, захватывающими this
+   (все колбэки библиотеки - std::function). Статическим остался только
+   трамплин таймера FreeRTOS, которому нужен C-указатель на функцию. */
+class MqttContext : public IPublisher
+{
   public:
-    static void initializate(const char* mqttServer
-                            ,const int mqttPort
-                            ,const char* mqttUser
-                            ,const char* mqttPass);
+    MqttContext();
 
-    /* true = сообщение принято клиентом. false = брокер недоступен, данные
-       НЕ отправлены; вызывающий не должен фиксировать состояние "опубликовано"
-       и повторит попытку на следующем опросе. */
-    static bool publishMessage(const char* topic, const char* payload);
+    void initializate(const MqttSettings &settings);
 
-    /* Можно звать из любого таска: только выставляет флаг. Сам connect()
+    bool publish(const char* topic, const char* payload) override;
+    uint32_t connectEpoch() const override;
+
+    bool isConnected() const;
+
+    /* Можно звать из любого таска: только запускает таймер. Сам connect()
        выполняет колбэк таймера, чтобы _state клиента трогал один таск. */
-    static void connectToMqtt();
-
-    static bool isConnected();
-
-    /* Растёт на каждом подключении. Нужен, чтобы после реконнекта
-       принудительно переопубликовать все показания. */
-    static uint32_t connectEpoch();
+    void connectToMqtt();
 
     /* Вызывается из loop(): перезагружает плату, если брокер недоступен
        дольше mqttMaxOfflineMs. */
-    static void supervise();
+    void supervise();
 
-    static void stopTimer();
-    static void startTimer();
+    void stopTimer();
+    void startTimer();
 
-  protected:
-   static TimerHandle_t _timerReconect;
-   static AsyncMqttClient _mqttClient;
+  private:
+    AsyncMqttClient _mqttClient;
+    TimerHandle_t   _timerReconect;
 
-   static volatile bool     _connected;
-   static volatile uint32_t _connectEpoch;
-   static volatile uint32_t _offlineSinceMs;
+    const char *_availabilityTopic;
 
-   static void onReconnectTimer(TimerHandle_t timer);
+    volatile bool     _connected;
+    volatile uint32_t _connectEpoch;
+    volatile uint32_t _offlineSinceMs;
 
-   static void onMqttConnect(bool sessionPresent);
-   static void onMqttDisconnect(AsyncMqttClientDisconnectReason reason);
-   static void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total);
-   static void onMqttPublish(uint16_t packetId);
-   static void onMqttSubscribe(uint16_t packetId, uint8_t qos);
-   static void onMqttUnsubscribe(uint16_t packetId);
+    void onReconnectTimer();
+    void onConnect(bool sessionPresent);
+    void onDisconnect(AsyncMqttClientDisconnectReason reason);
 
+    static void reconnectTimerTrampoline(TimerHandle_t timer);
 };
 
 #endif // _MQTT_CONTEXT_H

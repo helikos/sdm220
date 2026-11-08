@@ -1,0 +1,23 @@
+#pragma once
+#ifndef _SECURITY_H
+#define _SECURITY_H
+
+/* Шаблон. Скопируйте в src/security.h и впишите свои значения:
+ *
+ *     cp src/security.h.example src/security.h
+ *
+ * src/security.h в .gitignore и в репозиторий не попадает, поэтому без
+ * этого шага свежий клон не соберётся.
+ *
+ * ВНИМАНИЕ: значения вкомпилируются в прошивку и видны в firmware.bin
+ * через `strings`. Не отдавайте собранный бинарник третьим лицам.
+ */
+
+#define _SSID       "your-wifi-ssid"
+#define _PASS       "your-wifi-password"
+#define _MQTTSERVER "192.168.1.10"
+#define _MQTTPORT   1883
+#define _MQTTUSER   "mqtt"
+#define _MQTTPASS   "mqtt"
+
+#endif

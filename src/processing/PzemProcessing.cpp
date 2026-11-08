@@ -3,16 +3,7 @@
 
 #include "PzemProcessing.h"
 #include "configuration.h"
-#include "PublishGate.h"
-#include "registers/pzem/pzemInputRegisters.h"
-
-#include "ModbusMessage.h"
-#include "ModbusClientRTU.h"
-#include "utils/MqttContext.h"
-#include "utils/Logger.h"
-#include <ArduinoJson.h>
-
-#include "ModbusMqqtProcessing.h"
+#include "utils/Log.h"
 
 extern "C" {
   #include "freertos/FreeRTOS.h"
@@ -21,66 +12,70 @@ extern "C" {
 
 #define timeOfMain pdMS_TO_TICKS(2000)  // 2 sec
 
-extern Logger logger;
+#define pzemStartRegister 0
+#define pzemRegisterCount 10
 
-const char* PzemProcessing::_mqqtTopic = NULL;
-TimerHandle_t PzemProcessing::_timer = NULL;
-pzemInputRegister PzemProcessing::_lastPublishedValue;
-PublishGate PzemProcessing::_gate(heartbeatMsPzem);
-
-void PzemProcessing::initializate(MqttContext mqttContext
-                                ,const char* mqqtTopic
-                                ,const char* mqqtTopicError) {
-
-  ModbusMqqtProcessing::initializate(mqttContext, 9600, &handleData, &handleError, mqqtTopicError);
-  _mqqtTopic = mqqtTopic;
-  _timer = xTimerCreate("get", timeOfMain, pdFALSE, (void*)0, onPollTimer);
-  xTimerStart(_timer, 0);
-  
+PzemProcessing::PzemProcessing(IPublisher &publisher, const DeviceConfig &config)
+    : ModbusMqqtProcessing(publisher, config)
+    , _timer(NULL)
+    , _gate(heartbeatMsPzem)
+{
 }
 
-void PzemProcessing::onPollTimer(TimerHandle_t timer) {
-  (void)timer;
-  if (!requestOfMessage() && _timer != NULL) {
-    // Запрос отвергнут клиентом eModbus: колбэков не будет, перезапускаем
-    // таймер сами, иначе опрос останавливается навсегда.
-    logger.log(PSTR("PzemProcessing::onPollTimer request rejected, retry scheduled"));
+void PzemProcessing::initializate() {
+  LOG_INIT(PSTR("PzemProcessing::initializate started"));
+
+  initializateModbus([this](ModbusMessage response, uint32_t token) { onData(response, token); }
+                    ,[this](Error error, uint32_t token) { onError(error, token); });
+
+  _timer = xTimerCreate("get", timeOfMain, pdFALSE, this, pollTimerTrampoline);
+  xTimerStart(_timer, 0);
+
+  LOG_INIT(PSTR("PzemProcessing::initializate completed"));
+}
+
+void PzemProcessing::pollTimerTrampoline(TimerHandle_t timer) {
+  static_cast<PzemProcessing *>(pvTimerGetTimerID(timer))->onPollTimer();
+}
+
+void PzemProcessing::restartTimer() {
+  if (_timer != NULL && xTimerIsTimerActive(_timer) == pdFALSE) {
     xTimerStart(_timer, 0);
   }
 }
 
-bool PzemProcessing::requestOfMessage() {
-  logger.log(PSTR("PzemProcessing::requestOfMessage"));
-  return ModbusMqqtProcessing::request(0, 0, 10);
-};
+void PzemProcessing::onPollTimer() {
+  LOG_PROC(PSTR("PzemProcessing::onPollTimer"));
 
+  if (request(0, pzemStartRegister, pzemRegisterCount))
+    return;
 
-void PzemProcessing::processingOfMessage(ModbusMessage response) {
-  pzemInputRegister input = pzemInputRegister(response);
-  const String payload = input.toJson();
-  logger.log(PSTR("%s"), payload.c_str());
+  // Запрос отвергнут клиентом eModbus: колбэков не будет, перезапускаем
+  // таймер сами, иначе опрос останавливается навсегда.
+  LOG(PSTR("PzemProcessing::onPollTimer request rejected, retry scheduled"));
+  restartTimer();
+}
 
-  if (_gate.needsForcedPublish() || input.isChanged(_lastPublishedValue)) {
-    if (_mqttContext.publishMessage(_mqqtTopic, payload.c_str())) {
-      _lastPublishedValue = input;
-      _gate.onPublished();
+void PzemProcessing::onData(ModbusMessage response, uint32_t token) {
+  logResponse(response, token);
+
+  pzemInputRegister current(response);
+  const String payload = current.toJson();
+  LOG_PROC(PSTR("%s"), payload.c_str());
+
+  const uint32_t epoch = _publisher.connectEpoch();
+  if (_gate.needsForcedPublish(epoch) || current.isChanged(_lastPublishedValue)) {
+    // Состояние фиксируем только после успешной отправки.
+    if (_publisher.publish(_config.topicPower, payload.c_str())) {
+      _lastPublishedValue = current;
+      _gate.onPublished(epoch);
     }
   }
 
-  if (_timer != NULL && xTimerIsTimerActive(_timer) == pdFALSE) {
-    xTimerStart(_timer, 0);
-  }
-};
-
-void PzemProcessing::handleData(ModbusMessage response, uint32_t token) {
-  ModbusMqqtProcessing::handleData(response, token);
-  PzemProcessing::processingOfMessage(response); 
+  restartTimer();
 }
 
-void PzemProcessing::handleError(Error error, uint32_t token) 
-{
-  ModbusMqqtProcessing::handleError(error, token);
-  if (_timer != NULL && xTimerIsTimerActive(_timer) == pdFALSE) {
-    xTimerStart(_timer, 0);
-  }
+void PzemProcessing::onError(Error error, uint32_t token) {
+  publishError(error, token);
+  restartTimer();
 }

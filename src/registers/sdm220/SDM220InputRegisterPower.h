@@ -1,8 +1,8 @@
 #ifndef _SDM220_INPUT_REGISTER_POWER_H
 #define _SDM220_INPUT_REGISTER_POWER_H
 
+#include <Arduino.h>
 #include "ModbusMessage.h"
-#include "../inputRegisterParameters.h"
 
 /*
  30001 Line to neutral volts.   Volts      00 00
@@ -14,7 +14,7 @@
  30037 Phase angle.             Degree     00 24
 */
 
-class SDM220InputRegisterPower : public InputRegisterParameters
+class SDM220InputRegisterPower
 {
 public:
   float lineToNeutralVolts;
@@ -26,11 +26,10 @@ public:
   float phaseAngle;
 
   explicit SDM220InputRegisterPower();
-  explicit SDM220InputRegisterPower(ModbusMessage response);
+  explicit SDM220InputRegisterPower(const ModbusMessage &response);
   bool isChanged(const SDM220InputRegisterPower &value) const;
 
-  const char *toString();
-  String toJson();
+  String toJson() const;
 };
 
 #endif // _SDM220_INPUT_REGISTER_FIRST_H

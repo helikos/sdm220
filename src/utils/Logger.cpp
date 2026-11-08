@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <cstdarg>
 
+static const char logHeader[] = "Hi! I am sdm220 electricity sensor.\n";
+
 char Logger::buffer[sizeOfLog][msgLength];
 uint32_t Logger::position = 0;
 uint32_t Logger::size = 0;
@@ -83,17 +85,86 @@ void Logger::logInitialization() {
     Serial.println("Logger::logInitialization completed");
 }
 
-void Logger::publishLog(AsyncWebServerRequest *request) {
-    String status = "Hi! I am sdm220 electricity sensor.\n";
+void Logger::snapshot(uint32_t &firstPos, uint32_t &count) {
     Logger::lock();
-    uint32_t pos = 0;
-    if (Logger::size >= sizeOfLog)
-        pos = Logger::position;
-    for (uint32_t i = 0; i < Logger::size; i++) {
-        status += String(Logger::buffer[pos]) + "\n";
-        pos = Logger::addPosition(pos);
-    }
+    count = Logger::size;
+    firstPos = (Logger::size >= sizeOfLog) ? Logger::position : 0;
     Logger::unlock();
-    request->send(200, "text/plain", status);
+}
 
+size_t Logger::copyLine(uint32_t firstPos, uint32_t lineIndex, char *out, size_t outSize) {
+    // Мьютекс держим только на копирование одной строки: остальные таски
+    // продолжают писать в тот же кольцевой буфер. Индекс всегда в границах
+    // статического массива, так что выйти за пределы невозможно - в худшем
+    // случае строка окажется уже перезаписанной более свежей.
+    Logger::lock();
+    const int n = snprintf(out, outSize, "%s\n", Logger::buffer[(firstPos + lineIndex) % sizeOfLog]);
+    Logger::unlock();
+
+    if (n < 0) {
+        return 0;
+    }
+    return ((size_t)n < outSize) ? (size_t)n : (outSize - 1);
+}
+
+void Logger::publishLog(AsyncWebServerRequest *request) {
+    uint32_t firstPos = 0;
+    uint32_t count = 0;
+    Logger::snapshot(firstPos, count);
+
+    /* Раньше здесь собиралась одна String на весь буфер (~32 КБ) прямо
+       в таске AsyncTCP - скачок кучи на каждый запрос /log. Теперь
+       AsyncWebServer вызывает filler столько раз, сколько нужно, и самый
+       большой буфер в игре - одна строка лога.
+
+       piece и offset захвачены по значению в mutable-лямбду: ответ хранит
+       её копию и дёргает повторно, поэтому состояние обхода сохраняется. */
+    uint32_t piece = 0;   // 0 = заголовок, 1..count = строки лога
+    uint32_t offset = 0;  // сколько байт текущего куска уже отдано
+
+    request->sendChunked("text/plain",
+        [firstPos, count, piece, offset](uint8_t *out, size_t maxLen, size_t index) mutable -> size_t {
+            (void)index;
+
+            size_t written = 0;
+            char line[msgLength + 2];
+
+            while (piece <= count && written < maxLen) {
+                // Заголовок отдаём прямо из статической строки: копировать его
+                // в line нельзя - буфер рассчитан под строку лога, а заголовок
+                // длиннее, и при малом msgLength это затирало бы стек.
+                const char *src;
+                size_t len;
+                if (piece == 0) {
+                    src = logHeader;
+                    len = strlen(logHeader);
+                } else {
+                    len = Logger::copyLine(firstPos, piece - 1, line, sizeof(line));
+                    src = line;
+                }
+
+                if (offset >= len) {  // кусок пуст или уже отдан целиком
+                    piece++;
+                    offset = 0;
+                    continue;
+                }
+
+                size_t chunk = len - offset;
+                if (chunk > maxLen - written) {
+                    chunk = maxLen - written;
+                }
+                memcpy(out + written, src + offset, chunk);
+                written += chunk;
+                offset += chunk;
+
+                if (offset >= len) {
+                    piece++;
+                    offset = 0;
+                }
+            }
+
+            // 0 означает терминирующий chunk, поэтому возвращаем его только
+            // когда все куски действительно отданы.
+            return written;
+        });
 }

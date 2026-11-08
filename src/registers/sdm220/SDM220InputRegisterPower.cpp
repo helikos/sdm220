@@ -2,10 +2,8 @@
 #include "SDM220InputRegisterPower.h"
 #include <ArduinoJson.h>
 #include "configuration.h"
-#include "utils/Logger.h"
 #include "utils/commonFunctions.h"
 
-extern Logger logger;
 
 // #include "ModbusMessage.h"
 
@@ -58,7 +56,7 @@ SDM220InputRegisterPower::SDM220InputRegisterPower(){
 }
 
 
-SDM220InputRegisterPower::SDM220InputRegisterPower(ModbusMessage response)
+SDM220InputRegisterPower::SDM220InputRegisterPower(const ModbusMessage &response)
 {
   response.get(3, lineToNeutralVolts);
   response.get(15, current);
@@ -69,22 +67,10 @@ SDM220InputRegisterPower::SDM220InputRegisterPower(ModbusMessage response)
   response.get(75, phaseAngle);
 }
 
-const char *SDM220InputRegisterPower::toString()
-{
-  logger.log(PSTR("\n !!!!!! POWER !!!!!!!!!!!!!"));
-  logger.log(PSTR("Line to neutral volts %f Volts"), lineToNeutralVolts);
-  logger.log(PSTR("Current               %f Amps"), current);
-  logger.log(PSTR("Active power.         %f Watts"), activePower);
-  logger.log(PSTR("Apparent power        %f VoltAmps"), apparentPower);
-  logger.log(PSTR("Reactive power        %f VAr"), reactivePower);
-  logger.log(PSTR("Power factor          %f None"), powerFactor);
-  logger.log(PSTR("Phase angle.          %f Degree"), phaseAngle);
-  return "";
-}
 
-String SDM220InputRegisterPower::toJson()
+String SDM220InputRegisterPower::toJson() const
 {
-  DynamicJsonDocument doc(1024);
+  JsonDocument doc;
 
   doc[PSTR("lineVolts")] = lineToNeutralVolts;
   doc[PSTR("current")] = current;

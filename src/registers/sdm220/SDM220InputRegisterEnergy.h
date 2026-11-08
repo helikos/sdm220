@@ -1,7 +1,7 @@
 #ifndef _SDM220_INPUT_REGISTER_ENERGY_H
 #define _SDM220_INPUT_REGISTER_ENERGY_H
 
-#include "../inputRegisterParameters.h"
+#include <Arduino.h>
 #include "ModbusMessage.h"
 
 /*
@@ -12,7 +12,7 @@
  30079 Export reactive energy   kvarh      00 4E
  */
 
-class SDM220InputRegisterEnergy : public InputRegisterParameters
+class SDM220InputRegisterEnergy
 {
 public:
   float frequency;
@@ -22,11 +22,10 @@ public:
   float exportReactiveEnergy;
 
   explicit SDM220InputRegisterEnergy();
-  explicit SDM220InputRegisterEnergy(ModbusMessage response);
+  explicit SDM220InputRegisterEnergy(const ModbusMessage &response);
   bool isChanged(const SDM220InputRegisterEnergy &value) const;
 
-  const char *toString();
-  String toJson();
+  String toJson() const;
 };
 
 #endif // _SDM220_INPUT_REGISTER_SECOND_H

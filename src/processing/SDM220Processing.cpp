@@ -4,14 +4,7 @@
 #include "SDM220Processing.h"
 #include "SDM220TypeDefs.h"
 #include "configuration.h"
-#include "PublishGate.h"
-#include "registers/sdm220/SDM220InputRegisterPower.h"
-#include "registers/sdm220/SDM220InputRegisterEnergy.h"
-#include "registers/sdm220/SDM220InputRegisterTotal.h"
-#include "ModbusMessage.h"
-#include "ModbusClientRTU.h"
-#include "utils/MqttContext.h"
-#include "utils/Logger.h"
+#include "utils/Log.h"
 
 extern "C"
 {
@@ -23,159 +16,104 @@ extern "C"
 #define timeOfEnergy pdMS_TO_TICKS(120000) // 2 min
 #define timeOfTotal pdMS_TO_TICKS(180000)  // 3 minute
 
-extern Logger logger;
-
-const char *SDM220Processing::_mqqtTopicPower = NULL;
-const char *SDM220Processing::_mqqtTopicEnergy = NULL;
-const char *SDM220Processing::_mqqtTopicTotal = NULL;
-TimerHandle_t SDM220Processing::_timerPower = NULL;
-TimerHandle_t SDM220Processing::_timerEnergy = NULL;
-TimerHandle_t SDM220Processing::_timerTotal = NULL;
-
-SDM220InputRegisterEnergy SDM220Processing::_lastPublishedEnergy;
-SDM220InputRegisterPower SDM220Processing::_lastPublishedPower;
-SDM220InputRegisterTotal SDM220Processing::_lastPublishedTotal;
-
-PublishGate SDM220Processing::_powerGate(heartbeatMsPower);
-PublishGate SDM220Processing::_energyGate(heartbeatMsEnergy);
-PublishGate SDM220Processing::_totalGate(heartbeatMsTotal);
-
-void SDM220Processing::initializate(MqttContext mqttContext, const char *mqqtTopicPower, const char *mqqtTopicEnergy, const char *mqqtTopicTotal, const char *mqqtTopicError)
+SDM220Processing::SDM220Processing(IPublisher &publisher, const DeviceConfig &config)
+    : ModbusMqqtProcessing(publisher, config)
+    , _channels{
+          {this, thePower,  config.topicPower,  0,   42, NULL, PublishGate(heartbeatMsPower)},
+          {this, theEnergy, config.topicEnergy, 70,  12, NULL, PublishGate(heartbeatMsEnergy)},
+          {this, theTotal,  config.topicTotal,  342, 8,  NULL, PublishGate(heartbeatMsTotal)},
+      }
 {
-
-  ModbusMqqtProcessing::initializate(mqttContext, 2400, &handleData, &handleError, mqqtTopicError);
-
-  _mqqtTopicPower = mqqtTopicPower;
-  _mqqtTopicEnergy = mqqtTopicEnergy;
-  _mqqtTopicTotal = mqqtTopicTotal;
-
-  _timerPower = xTimerCreate("getPower", timeOfPower, pdFALSE, (void *)thePower, onPollTimer);
-  _timerEnergy = xTimerCreate("getEnergy", timeOfEnergy, pdFALSE, (void *)theEnergy, onPollTimer);
-  _timerTotal = xTimerCreate("getTotal", timeOfTotal, pdFALSE, (void *)theTotal, onPollTimer);
-
-  xTimerStart(_timerPower, 0);
-  xTimerStart(_timerEnergy, 0);
-  xTimerStart(_timerTotal, 0);
 }
 
-TimerHandle_t SDM220Processing::timerFor(RegistersClass registers)
+void SDM220Processing::initializate()
 {
-  switch (registers)
-  {
-  case thePower:
-    return _timerPower;
-  case theEnergy:
-    return _timerEnergy;
-  case theTotal:
-    return _timerTotal;
-  default:
+    LOG_INIT(PSTR("SDM220Processing::initializate started"));
+
+    initializateModbus([this](ModbusMessage response, uint32_t token) { onData(response, token); }
+                      ,[this](Error error, uint32_t token) { onError(error, token); });
+
+    static const char *const timerNames[3] = {"getPower", "getEnergy", "getTotal"};
+    static const TickType_t timerPeriods[3] = {timeOfPower, timeOfEnergy, timeOfTotal};
+
+    for (uint8_t i = 0; i < 3; i++)
+    {
+        _channels[i].timer = xTimerCreate(timerNames[i], timerPeriods[i], pdFALSE
+                                         ,&_channels[i], pollTimerTrampoline);
+        xTimerStart(_channels[i].timer, 0);
+    }
+
+    LOG_INIT(PSTR("SDM220Processing::initializate completed"));
+}
+
+SDM220Processing::Channel *SDM220Processing::channelFor(RegistersClass registers)
+{
+    for (uint8_t i = 0; i < 3; i++)
+    {
+        if (_channels[i].registers == registers)
+            return &_channels[i];
+    }
     return NULL;
-  }
 }
 
-void SDM220Processing::onPollTimer(TimerHandle_t timer)
+void SDM220Processing::pollTimerTrampoline(TimerHandle_t timer)
 {
-  requestOrRetry((RegistersClass)(uint32_t)pvTimerGetTimerID(timer));
+    // В timer ID лежит канал, а владельца канал хранит сам: так из
+    // C-колбэка FreeRTOS попадаем в метод нужного экземпляра.
+    Channel *channel = static_cast<Channel *>(pvTimerGetTimerID(timer));
+    channel->owner->onPollTimer(*channel);
 }
 
-void SDM220Processing::requestOrRetry(RegistersClass registers)
+void SDM220Processing::onPollTimer(Channel &channel)
 {
-  if (requestOfMessage(registers))
-    return;
+    LOG_PROC(PSTR("SDM220Processing::onPollTimer %08X"), (unsigned)channel.registers);
 
-  // Запрос не попал в очередь eModbus, значит ни handleData, ни handleError
-  // не вызовутся и перезапустить таймер больше некому: без этого цепочка
-  // опроса умирала до перезагрузки.
-  TimerHandle_t timer = timerFor(registers);
-  if (timer != NULL)
-  {
-    logger.log(PSTR("SDM220Processing::requestOrRetry request rejected, retry scheduled %08X"), (unsigned)registers);
-    xTimerStart(timer, 0);
-  }
+    if (request(channel.registers, channel.startRegister, channel.amount))
+        return;
+
+    // Запрос не попал в очередь eModbus, значит ни onData, ни onError
+    // не вызовутся и перезапустить таймер больше некому: без этого цепочка
+    // опроса умирала до перезагрузки.
+    LOG(PSTR("SDM220Processing::onPollTimer request rejected, retry scheduled %08X"), (unsigned)channel.registers);
+    xTimerStart(channel.timer, 0);
 }
 
-void SDM220Processing::processingOfMessage(ModbusMessage response, RegistersClass registers)
+void SDM220Processing::onData(ModbusMessage response, uint32_t token)
 {
-  logger.log(PSTR("SDM220Processing::processingOfMessage token %08X"), (unsigned)registers);
-  switch (registers) {
-    case thePower: {
-      SDM220InputRegisterPower power = SDM220InputRegisterPower(response);
-      const String payload = power.toJson();
-      logger.log(PSTR("%s"), payload.c_str());
-      if (_powerGate.needsForcedPublish() || power.isChanged(_lastPublishedPower)) {
-        // Состояние фиксируем только после успешной отправки: при недоступном
-        // брокере следующий опрос повторит попытку.
-        if (_mqttContext.publishMessage(_mqqtTopicPower, payload.c_str())) {
-          _lastPublishedPower = power;
-          _powerGate.onPublished();
-        }
-      }
-      xTimerStart(_timerPower, 0);
+    logResponse(response, token);
+
+    Channel *channel = channelFor((RegistersClass)token);
+    if (channel == NULL)
+    {
+        LOG(PSTR("SDM220Processing::onData unknown token %08X"), (unsigned)token);
+        return;
     }
-    break;
-    case theEnergy: {
-      SDM220InputRegisterEnergy energy = SDM220InputRegisterEnergy(response);
-      const String payload = energy.toJson();
-      logger.log(PSTR("%s"), payload.c_str());
-      if (_energyGate.needsForcedPublish() || energy.isChanged(_lastPublishedEnergy)) {
-        if (_mqttContext.publishMessage(_mqqtTopicEnergy, payload.c_str())) {
-          _lastPublishedEnergy = energy;
-          _energyGate.onPublished();
-        }
-      }
-      xTimerStart(_timerEnergy, 0);
-    }
-    break;
-    case theTotal: {
-      SDM220InputRegisterTotal total = SDM220InputRegisterTotal(response);
-      const String payload = total.toJson();
-      logger.log(PSTR("%s"), payload.c_str());
-      if (_totalGate.needsForcedPublish() || total.isChanged(_lastPublishedTotal)) {
-        if (_mqttContext.publishMessage(_mqqtTopicTotal, payload.c_str())) {
-          _lastPublishedTotal = total;
-          _totalGate.onPublished();
-        }
-      }
-      xTimerStart(_timerTotal, 0);
-    }
-    break;
-    default:
-      logger.log(PSTR("!!!!! SDM220Processing::processingOfMessage unknown token  %08X"), (unsigned)registers);
-  };
-};
 
-bool SDM220Processing::requestOfMessage(RegistersClass registers)
-{
-  logger.log(PSTR("SDM220Processing::requestOfMessage %08X"), (unsigned)registers);
-  switch (registers)
-  {
-  case thePower:
-    return ModbusMqqtProcessing::request(registers, 0, 42);
-  case theEnergy:
-    return ModbusMqqtProcessing::request(registers, 70, 12);
-  case theTotal:
-    return ModbusMqqtProcessing::request(registers, 342, 8);
-  default:
-    logger.log(PSTR("SDM220Processing::requestOfMessage unknown token %08X"), (unsigned)registers);
-    return false;
-  };
-};
+    switch (channel->registers)
+    {
+    case thePower:
+        publishIfNeeded(*channel, _lastPublishedPower, response);
+        break;
+    case theEnergy:
+        publishIfNeeded(*channel, _lastPublishedEnergy, response);
+        break;
+    case theTotal:
+        publishIfNeeded(*channel, _lastPublishedTotal, response);
+        break;
+    }
 
-void SDM220Processing::handleData(ModbusMessage response, uint32_t token)
-{
-  ModbusMqqtProcessing::handleData(response, token);
-  SDM220Processing::processingOfMessage(response, (RegistersClass)token);
+    xTimerStart(channel->timer, 0);
 }
 
-void SDM220Processing::handleError(Error error, uint32_t token)
+void SDM220Processing::onError(Error error, uint32_t token)
 {
-  ModbusMqqtProcessing::handleError(error, token);
-  logger.log(PSTR("SDM220Processing::handleError token %08X"), (unsigned)token);
+    publishError(error, token);
 
-  TimerHandle_t timer = timerFor((RegistersClass)token);
-  if (timer != NULL) {
-    xTimerStart(timer, 0);
-  } else {
-    logger.log(PSTR("SDM220Processing::handleError unknown token %08X"), (unsigned)token);
-  }
+    Channel *channel = channelFor((RegistersClass)token);
+    if (channel == NULL)
+    {
+        LOG(PSTR("SDM220Processing::onError unknown token %08X"), (unsigned)token);
+        return;
+    }
+    xTimerStart(channel->timer, 0);
 }

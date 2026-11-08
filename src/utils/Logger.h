@@ -35,6 +35,13 @@ private:
     static void lock();
     static void unlock();
 
+    /* Границы для обхода буфера без его копирования. */
+    static void snapshot(uint32_t &firstPos, uint32_t &count);
+
+    /* Копирует одну строку снимка в out вместе с '\n'.
+       Возвращает число записанных байт. */
+    static size_t copyLine(uint32_t firstPos, uint32_t lineIndex, char *out, size_t outSize);
+
 };
 
 

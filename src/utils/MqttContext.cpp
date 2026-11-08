@@ -3,7 +3,7 @@
 #include "MqttContext.h"
 #include <AsyncMqttClient.h>
 #include <WiFi.h>
-#include "Logger.h"
+#include "Log.h"
 #include "configuration.h"
 
 extern "C" {
@@ -13,61 +13,79 @@ extern "C" {
 
 #define timeOfReconect pdMS_TO_TICKS(2000)
 
-#if defined(debug) && defined(debug_mqtt)
-#  define LOG_MQTT(...) logger.log(__VA_ARGS__)
-#else
-#  define LOG_MQTT(...) ((void)0)
-#endif
-
-TimerHandle_t MqttContext::_timerReconect = NULL;
-AsyncMqttClient MqttContext::_mqttClient;
-
-volatile bool     MqttContext::_connected = false;
-volatile uint32_t MqttContext::_connectEpoch = 0;
-volatile uint32_t MqttContext::_offlineSinceMs = 0;
-
-extern Logger  logger;
-
-void MqttContext::initializate(const char* mqttServer
-                              ,const int mqttPort
-                              ,const char* mqttUser
-                              ,const char* mqttPass) {
-  LOG_MQTT(PSTR("MqttContext::initializate started"));
-
-  _offlineSinceMs = millis();
-  _timerReconect = xTimerCreate("mqttTimer", timeOfReconect, pdFALSE, (void*)0, onReconnectTimer);
-  _mqttClient.onConnect(onMqttConnect);
-  _mqttClient.onDisconnect(onMqttDisconnect);
-  _mqttClient.onSubscribe(onMqttSubscribe);
-  _mqttClient.onUnsubscribe(onMqttUnsubscribe);
-  _mqttClient.onMessage(onMqttMessage);
-  _mqttClient.onPublish(onMqttPublish);
-  _mqttClient.setServer(mqttServer, mqttPort);
-  _mqttClient.setCredentials(mqttUser, mqttPass);
-
-  LOG_MQTT(PSTR("MqttContext::initializate completed"));
+MqttContext::MqttContext()
+    : _timerReconect(NULL)
+    , _availabilityTopic(NULL)
+    , _connected(false)
+    , _connectEpoch(0)
+    , _offlineSinceMs(0)
+{
 }
 
-bool MqttContext::isConnected() {
+void MqttContext::initializate(const MqttSettings &settings) {
+  LOG_INIT(PSTR("MqttContext::initializate started"));
+
+  _availabilityTopic = settings.availabilityTopic;
+  _offlineSinceMs = millis();
+  _timerReconect = xTimerCreate("mqttTimer", timeOfReconect, pdFALSE, this, reconnectTimerTrampoline);
+
+  _mqttClient.onConnect([this](bool sessionPresent) { onConnect(sessionPresent); });
+  _mqttClient.onDisconnect([this](AsyncMqttClientDisconnectReason reason) { onDisconnect(reason); });
+  _mqttClient.onSubscribe([](uint16_t packetId, uint8_t qos) {
+    LOG_MQTT(PSTR("MqttContext Subscribe acknowledged. packetId: %d qos: %d"), packetId, qos);
+  });
+  _mqttClient.onUnsubscribe([](uint16_t packetId) {
+    LOG_MQTT(PSTR("MqttContext Unsubscribe acknowledged. packetId: %d"), packetId);
+  });
+  _mqttClient.onPublish([](uint16_t packetId) {
+    LOG_MQTT(PSTR("MqttContext Publish acknowledged. packetId: %d"), packetId);
+  });
+  _mqttClient.onMessage([](char* topic, char* payload, AsyncMqttClientMessageProperties properties
+                          ,size_t len, size_t index, size_t total) {
+    (void)payload;
+    (void)properties;
+    // Подписок нет, так что сюда пока не попадаем.
+    LOG_MQTT(PSTR("MqttContext::onMqttMessage topic %s len %u, index %u, total %u")
+            ,topic, (unsigned)len, (unsigned)index, (unsigned)total);
+  });
+
+  _mqttClient.setServer(settings.server, settings.port);
+  _mqttClient.setCredentials(settings.user, settings.pass);
+  _mqttClient.setKeepAlive(settings.keepAliveSeconds);
+
+  if (settings.clientId != NULL) {
+    _mqttClient.setClientId(settings.clientId);
+  }
+
+  if (_availabilityTopic != NULL) {
+    // Last Will: offline публикует БРОКЕР, когда клиент пропал, не прислав
+    // DISCONNECT - в том числе при обрыве WiFi и при ESP.restart().
+    // retain обязателен, иначе подписавшийся позже не увидит состояние.
+    _mqttClient.setWill(_availabilityTopic, mqttQos, true, availabilityOffline);
+    LOG_INIT(PSTR("MqttContext::initializate will topic: %s"), _availabilityTopic);
+  }
+
+  LOG_INIT(PSTR("MqttContext::initializate completed"));
+}
+
+bool MqttContext::isConnected() const {
   return _connected;
 }
 
-uint32_t MqttContext::connectEpoch() {
+uint32_t MqttContext::connectEpoch() const {
   return _connectEpoch;
 }
 
-/* Только заявка на подключение. Раньше здесь вызывался _mqttClient.connect()
-   из таска событий WiFi и из таска таймеров одновременно (гонка по _state),
-   а завершался вызов delay(1000), который блокировал службу таймеров
-   вместе со всеми опросами счётчика. */
 void MqttContext::connectToMqtt() {
   LOG_MQTT(PSTR("MqttContext::connectToMqtt requested"));
-  MqttContext::startTimer();
+  startTimer();
 }
 
-void MqttContext::onReconnectTimer(TimerHandle_t timer) {
-  (void)timer;
+void MqttContext::reconnectTimerTrampoline(TimerHandle_t timer) {
+  static_cast<MqttContext*>(pvTimerGetTimerID(timer))->onReconnectTimer();
+}
 
+void MqttContext::onReconnectTimer() {
   if (_mqttClient.connected()) {
     return;
   }
@@ -80,26 +98,30 @@ void MqttContext::onReconnectTimer(TimerHandle_t timer) {
   LOG_MQTT(PSTR("MqttContext::onReconnectTimer connecting to MQTT..."));
   _mqttClient.connect();
 
-  // Повторная попытка, пока не придёт onMqttConnect.
-  MqttContext::startTimer();
+  // Повторная попытка, пока не придёт onConnect.
+  startTimer();
 }
 
-void MqttContext::onMqttConnect(bool sessionPresent) {
+void MqttContext::onConnect(bool sessionPresent) {
   _connected = true;
   _connectEpoch++;
-  LOG_MQTT(PSTR("MqttContext::onMqttConnect connected to MQTT, session present: %d, epoch: %u")
+  LOG_MQTT(PSTR("MqttContext::onConnect connected to MQTT, session present: %d, epoch: %u")
           ,(int)sessionPresent, (unsigned)_connectEpoch);
-  MqttContext::stopTimer();
+
+  if (_availabilityTopic != NULL) {
+    publish(_availabilityTopic, availabilityOnline);
+  }
+
+  stopTimer();
 }
 
-
-void MqttContext::onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
+void MqttContext::onDisconnect(AsyncMqttClientDisconnectReason reason) {
   _connected = false;
   _offlineSinceMs = millis();
-  LOG_MQTT(PSTR("MqttContext::onMqttDisconnect disconnected from MQTT, reason: %d"), (int)reason);
+  LOG_MQTT(PSTR("MqttContext::onDisconnect disconnected from MQTT, reason: %d"), (int)reason);
   if (WiFi.isConnected()) {
-    LOG_MQTT(PSTR("MqttContext::onMqttDisconnect MQTT timer reconnect start"));
-    MqttContext::startTimer();
+    LOG_MQTT(PSTR("MqttContext::onDisconnect MQTT timer reconnect start"));
+    startTimer();
   }
 }
 
@@ -110,7 +132,7 @@ void MqttContext::supervise() {
   }
   const uint32_t offlineFor = millis() - _offlineSinceMs;
   if (offlineFor >= mqttMaxOfflineMs) {
-    logger.log(PSTR("MqttContext::supervise MQTT offline for %u ms, restarting"), (unsigned)offlineFor);
+    LOG(PSTR("MqttContext::supervise MQTT offline for %u ms, restarting"), (unsigned)offlineFor);
     Serial.flush();
     ESP.restart();
   }
@@ -137,37 +159,14 @@ void MqttContext::startTimer() {
   }
 }
 
-
-void MqttContext::onMqttSubscribe(uint16_t packetId, uint8_t qos) {
-  LOG_MQTT(PSTR("MqttContext::onMqttSubscribe Subscribe acknowledged. packetId: %d qos: %d"), packetId, qos);
-}
-
-void MqttContext::onMqttUnsubscribe(uint16_t packetId) {
-  LOG_MQTT(PSTR("MqttContext::onMqttUnsubscribe Unsubscribe acknowledged. packetId: %d"), packetId);
-}
-
-void MqttContext::onMqttPublish(uint16_t packetId) {
-  LOG_MQTT(PSTR("MqttContext::onMqttPublish Publish acknowledged. packetId: %d"), packetId);
-}
-
-
-void MqttContext::onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-  (void)payload;
-  (void)properties;
-  // Подписок нет, так что сюда пока не попадаем. Строка из payload больше
-  // не собирается: раньше она строилась дважды и выбрасывалась.
-  LOG_MQTT(PSTR("MqttContext::onMqttMessage topic %s len %u, index %u, total %u")
-          ,topic, (unsigned)len, (unsigned)index, (unsigned)total);
-}
-
-bool MqttContext::publishMessage(const char* topic, const char* payload) {
+bool MqttContext::publish(const char* topic, const char* payload) {
   if (!_connected) {
-    LOG_MQTT(PSTR("MqttContext::publishMessage not connected, dropped: %s"), topic);
+    LOG_MQTT(PSTR("MqttContext::publish not connected, dropped: %s"), topic);
     return false;
   }
 
   const uint16_t ret = _mqttClient.publish(topic, mqttQos, mqttRetain, payload);
-  LOG_MQTT(PSTR("MqttContext::publishMessage topic: %s packetId: %u"), topic, (unsigned)ret);
+  LOG_MQTT(PSTR("MqttContext::publish topic: %s packetId: %u"), topic, (unsigned)ret);
   LOG_MQTT(PSTR("%s"), payload);
 
   // QoS 0 всегда отдаёт 0; для QoS > 0 ноль означает отказ клиента

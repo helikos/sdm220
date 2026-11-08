@@ -4,34 +4,33 @@
 
 #include "ModbusMessage.h"
 #include "ModbusClientRTU.h"
-#include "utils/MqttContext.h"
+#include "configuration.h"
+#include "deviceConfig.h"
+#include "utils/IPublisher.h"
 #include "ModbusMqqtProcessing.h"
 #include "PublishGate.h"
 #include "registers/pzem/pzemInputRegisters.h"
 
-class PzemProcessing : public ModbusMqqtProcessing{
+class PzemProcessing : public ModbusMqqtProcessing
+{
 
-    public:
+public:
+    PzemProcessing(IPublisher &publisher, const DeviceConfig &config);
 
-        void initializate(MqttContext mqttContext
-                         ,const char* mqqtTopic
-                         ,const char* mqqtTopicError);
-   
-    protected:
+    void initializate();
 
-        static const char* _mqqtTopic;
-        static TimerHandle_t _timer;
-        static pzemInputRegister _lastPublishedValue;
-        static PublishGate _gate;
+private:
+    TimerHandle_t _timer;
+    PublishGate _gate;
+    pzemInputRegister _lastPublishedValue;
 
-        static void onPollTimer(TimerHandle_t timer);
-        static bool requestOfMessage();
+    void onData(ModbusMessage response, uint32_t token);
+    void onError(Error error, uint32_t token);
 
-        static void processingOfMessage(ModbusMessage response);
+    static void pollTimerTrampoline(TimerHandle_t timer);
+    void onPollTimer();
 
-        static void handleData(ModbusMessage response, uint32_t token); 
-        static void handleError(Error error, uint32_t token);
-
+    void restartTimer();
 };
 
 #endif

@@ -1,18 +1,17 @@
 
 #include "PublishGate.h"
-#include "utils/MqttContext.h"
 
 PublishGate::PublishGate(uint32_t heartbeatInterval)
     : _heartbeatMs(heartbeatInterval), _lastPublishMs(0), _publishedEpoch(0), _hasPublished(false)
 {
 }
 
-bool PublishGate::needsForcedPublish() const
+bool PublishGate::needsForcedPublish(uint32_t connectEpoch) const
 {
     if (!_hasPublished)
         return true;
 
-    if (MqttContext::connectEpoch() != _publishedEpoch)
+    if (connectEpoch != _publishedEpoch)
         return true;
 
     // Вычитание uint32_t корректно переживает переполнение millis() (~49.7 суток).
@@ -22,9 +21,9 @@ bool PublishGate::needsForcedPublish() const
     return false;
 }
 
-void PublishGate::onPublished()
+void PublishGate::onPublished(uint32_t connectEpoch)
 {
     _lastPublishMs = millis();
-    _publishedEpoch = MqttContext::connectEpoch();
+    _publishedEpoch = connectEpoch;
     _hasPublished = true;
 }
