@@ -66,7 +66,7 @@ void SDM220Processing::pollTimerTrampoline(TimerHandle_t timer)
 
 void SDM220Processing::onPollTimer(Channel &channel)
 {
-    LOG_PROC(PSTR("SDM220Processing::onPollTimer %08X"), (unsigned)channel.registers);
+    LOG_MODBUS(PSTR("SDM220Processing::onPollTimer %08X"), (unsigned)channel.registers);
 
     if (request(channel.registers, channel.startRegister, channel.amount))
         return;

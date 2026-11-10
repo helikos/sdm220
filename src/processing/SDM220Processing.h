@@ -65,8 +65,11 @@ private:
     {
         TRegister current(response);
         const String payload = current.toJson();
-        LOG_PROC(PSTR("%s"), payload.c_str());
 
+        // Payload здесь НЕ логируем: его печатает MqttContext::publish, и
+        // только когда сообщение действительно уходит. Раньше он попадал
+        // в лог на каждом опросе, да ещё и дублировался при публикации -
+        // 128 записей кольца вытеснялись за 64 секунды.
         const uint32_t epoch = _publisher.connectEpoch();
         if (channel.gate.needsForcedPublish(epoch) || current.isChanged(lastPublished))
         {

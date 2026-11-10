@@ -84,13 +84,22 @@ String SDM220InputRegisterPower::toJson() const
   return output;
 }
 
+/* Проверяются только НЕЗАВИСИМЫЕ величины.
+
+   apparentPower, reactivePower и phaseAngle счётчик вычисляет из
+   activePower и powerFactor - это подтвердилось на реальных данных:
+   sqrt(P^2+Q^2) совпало с S до точности float, P/S - с PF до шестого
+   знака, а angle оказался равен 360 - acos(PF). Включать их в детектор
+   изменений значит трижды переспрашивать одно и то же, причём в более
+   шумном виде: относительный разброс реактивной мощности на наблюдаемой
+   нагрузке был 1.4% против 0.9% у активной, так что публикациями
+   управлял бы именно её шум.
+
+   В JSON они по-прежнему уходят - речь только о детекторе. */
 bool SDM220InputRegisterPower::isChanged(const SDM220InputRegisterPower &value) const
 {
-  return isSignificantChange(lineToNeutralVolts, value.lineToNeutralVolts, deadbandVolts, deadbandRelPercent)
+  return isSignificantChange(lineToNeutralVolts, value.lineToNeutralVolts, deadbandVolts, deadbandRelPercentFixed)
          || isSignificantChange(current, value.current, deadbandAmps, deadbandRelPercent)
          || isSignificantChange(activePower, value.activePower, deadbandWatts, deadbandRelPercent)
-         || isSignificantChange(apparentPower, value.apparentPower, deadbandVa, deadbandRelPercent)
-         || isSignificantChange(reactivePower, value.reactivePower, deadbandVar, deadbandRelPercent)
-         || isSignificantChange(powerFactor, value.powerFactor, deadbandPowerFactor, deadbandRelPercent)
-         || isSignificantChange(phaseAngle, value.phaseAngle, deadbandDegrees, deadbandRelPercent);
+         || isSignificantChange(powerFactor, value.powerFactor, deadbandPowerFactor, deadbandRelPercentFixed);
 }

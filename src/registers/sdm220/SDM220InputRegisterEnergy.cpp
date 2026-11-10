@@ -53,11 +53,17 @@ String SDM220InputRegisterEnergy::toJson() const {
   return output;
 }
 
+/* Все величины здесь - с относительным порогом 0.
+
+   Частота живёт в полосе 50 +- 0.2 Гц, и 3% от номинала (1.5 Гц) глушили
+   осмысленный порог 0.05 Гц наглухо. Счётчики энергии накопительные:
+   процент от накопленного (3% от 1000 кВт*ч - это 30 кВт*ч) означал бы,
+   что приращения не публикуются практически никогда. */
 bool SDM220InputRegisterEnergy::isChanged(const SDM220InputRegisterEnergy &value) const
 {
-  return isSignificantChange(frequency, value.frequency, deadbandHz, deadbandRelPercent)
-         || isSignificantChange(importActiveEnergy, value.importActiveEnergy, deadbandKwh, deadbandRelPercent)
-         || isSignificantChange(exportActiveEnergy, value.exportActiveEnergy, deadbandKwh, deadbandRelPercent)
-         || isSignificantChange(importReactiveEnergy, value.importReactiveEnergy, deadbandKvarh, deadbandRelPercent)
-         || isSignificantChange(exportReactiveEnergy, value.exportReactiveEnergy, deadbandKvarh, deadbandRelPercent);
+  return isSignificantChange(frequency, value.frequency, deadbandHz, deadbandRelPercentFixed)
+         || isSignificantChange(importActiveEnergy, value.importActiveEnergy, deadbandKwh, deadbandRelPercentFixed)
+         || isSignificantChange(exportActiveEnergy, value.exportActiveEnergy, deadbandKwh, deadbandRelPercentFixed)
+         || isSignificantChange(importReactiveEnergy, value.importReactiveEnergy, deadbandKvarh, deadbandRelPercentFixed)
+         || isSignificantChange(exportReactiveEnergy, value.exportReactiveEnergy, deadbandKvarh, deadbandRelPercentFixed);
 }

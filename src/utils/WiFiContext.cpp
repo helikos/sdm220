@@ -220,7 +220,7 @@ void WiFiContext::startTimer()
 
 void WiFiContext::onWiFiEvent(WiFiEvent_t event)
 {
-    LOG(PSTR("WiFiContext::WiFiEvent: %s"), WiFiContext::describeWiFiEvent(event));
+    LOG(PSTR("WiFiContext::onWiFiEvent: %s"), WiFiContext::describeWiFiEvent(event));
     switch (event)
     {
     case SYSTEM_EVENT_STA_GOT_IP:
@@ -246,73 +246,73 @@ void WiFiContext::onWiFiEvent(WiFiEvent_t event)
         startTimer();
         break;
     case SYSTEM_EVENT_WIFI_READY:
-        LOG(PSTR("WiFiContext::WiFiEvent WiFi interface ready"));
+        LOG(PSTR("WiFiContext::onWiFiEvent WiFi interface ready"));
         break;
     case SYSTEM_EVENT_SCAN_DONE:
-        LOG(PSTR("WiFiContext::WiFiEvent Completed scan for access points"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Completed scan for access points"));
         break;
     case SYSTEM_EVENT_STA_START:
-        LOG(PSTR("WiFiContext::WiFiEvent WiFi client started"));
+        LOG(PSTR("WiFiContext::onWiFiEvent WiFi client started"));
         break;
     case SYSTEM_EVENT_STA_STOP:
-        LOG(PSTR("WiFiContext::WiFiEvent WiFi clients stopped"));
+        LOG(PSTR("WiFiContext::onWiFiEvent WiFi clients stopped"));
         break;
     case SYSTEM_EVENT_STA_CONNECTED:
-        LOG(PSTR("WiFiContext::WiFiEvent Connected to access point"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Connected to access point"));
         break;
     case SYSTEM_EVENT_STA_AUTHMODE_CHANGE:
-        LOG(PSTR("WiFiContext::WiFiEvent Authentication mode of access point has changed"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Authentication mode of access point has changed"));
         break;
     case SYSTEM_EVENT_STA_LOST_IP:
-        LOG(PSTR("WiFiContext::WiFiEvent Lost IP address and IP address is reset to 0"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Lost IP address and IP address is reset to 0"));
         break;
     case SYSTEM_EVENT_STA_WPS_ER_SUCCESS:
-        LOG(PSTR("WiFiContext::WiFiEvent WiFi Protected Setup (WPS): succeeded in enrollee mode"));
+        LOG(PSTR("WiFiContext::onWiFiEvent WiFi Protected Setup (WPS): succeeded in enrollee mode"));
         break;
     case SYSTEM_EVENT_STA_WPS_ER_FAILED:
-        LOG(PSTR("WiFiContext::WiFiEvent WiFi Protected Setup (WPS): failed in enrollee mode"));
+        LOG(PSTR("WiFiContext::onWiFiEvent WiFi Protected Setup (WPS): failed in enrollee mode"));
         break;
     case SYSTEM_EVENT_STA_WPS_ER_TIMEOUT:
-        LOG(PSTR("WiFiContext::WiFiEvent WiFi Protected Setup (WPS): timeout in enrollee mode"));
+        LOG(PSTR("WiFiContext::onWiFiEvent WiFi Protected Setup (WPS): timeout in enrollee mode"));
         break;
     case SYSTEM_EVENT_STA_WPS_ER_PIN:
-        LOG(PSTR("WiFiContext::WiFiEvent WiFi Protected Setup (WPS): pin code in enrollee mode"));
+        LOG(PSTR("WiFiContext::onWiFiEvent WiFi Protected Setup (WPS): pin code in enrollee mode"));
         break;
     case SYSTEM_EVENT_AP_START:
-        LOG(PSTR("WiFiContext::WiFiEvent WiFi access point started"));
+        LOG(PSTR("WiFiContext::onWiFiEvent WiFi access point started"));
         break;
     case SYSTEM_EVENT_AP_STOP:
-        LOG(PSTR("WiFiContext::WiFiEvent WiFi access point  stopped"));
+        LOG(PSTR("WiFiContext::onWiFiEvent WiFi access point  stopped"));
         break;
     case SYSTEM_EVENT_AP_STACONNECTED:
-        LOG(PSTR("WiFiContext::WiFiEvent Client connected"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Client connected"));
         break;
     case SYSTEM_EVENT_AP_STADISCONNECTED:
-        LOG(PSTR("WiFiContext::WiFiEvent Client disconnected"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Client disconnected"));
         break;
     case SYSTEM_EVENT_AP_STAIPASSIGNED:
-        LOG(PSTR("WiFiContext::WiFiEvent Assigned IP address to client"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Assigned IP address to client"));
         break;
     case SYSTEM_EVENT_AP_PROBEREQRECVED:
-        LOG(PSTR("WiFiContext::WiFiEvent Received probe request"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Received probe request"));
         break;
     case SYSTEM_EVENT_GOT_IP6:
-        LOG(PSTR("WiFiContext::WiFiEvent IPv6 is preferred"));
+        LOG(PSTR("WiFiContext::onWiFiEvent IPv6 is preferred"));
         break;
     case SYSTEM_EVENT_ETH_START:
-        LOG(PSTR("WiFiContext::WiFiEvent Ethernet started"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Ethernet started"));
         break;
     case SYSTEM_EVENT_ETH_STOP:
-        LOG(PSTR("WiFiContext::WiFiEvent Ethernet stopped"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Ethernet stopped"));
         break;
     case SYSTEM_EVENT_ETH_CONNECTED:
-        LOG(PSTR("WiFiContext::WiFiEvent Ethernet connected"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Ethernet connected"));
         break;
     case SYSTEM_EVENT_ETH_DISCONNECTED:
-        LOG(PSTR("WiFiContext::WiFiEvent Ethernet disconnected"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Ethernet disconnected"));
         break;
     case SYSTEM_EVENT_ETH_GOT_IP:
-        LOG(PSTR("WiFiContext::WiFiEvent Obtained IP address"));
+        LOG(PSTR("WiFiContext::onWiFiEvent Obtained IP address"));
         break;
     default:
         break;

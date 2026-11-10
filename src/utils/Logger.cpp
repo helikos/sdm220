@@ -28,9 +28,22 @@ size_t Logger::log(const char *format, ...) {
 
     char *msg = Logger::buffer[Logger::position];
 
+    /* Время работы в начале каждой строки. Без него по /log нельзя было
+       определить даже частоту публикаций: приходилось опознавать heartbeat
+       арифметикой по порогам. Часы не ограничены 24 - для uptime так
+       удобнее (50:12:33 читается однозначно). */
+    const uint32_t now = millis();
+    int head = snprintf(msg, msgLength, "%02u:%02u:%02u  "
+                       ,(unsigned)numberOfHours(now)
+                       ,(unsigned)numberOfMinutes(now)
+                       ,(unsigned)numberOfSeconds(now));
+    if (head < 0 || (size_t)head >= msgLength) {
+        head = 0;
+    }
+
     va_list arg;
     va_start(arg, format);
-    int len = vsnprintf(msg, msgLength, format, arg);
+    int len = vsnprintf(msg + head, msgLength - head, format, arg);
     va_end(arg);
 
     if (len < 0) {
@@ -38,6 +51,7 @@ size_t Logger::log(const char *format, ...) {
         Logger::unlock();
         return 0;
     }
+    len += head;
 
 #ifdef isPrint2Serial
     // Печатаем ту же строку, что легла в кольцевой буфер: отдельный общий

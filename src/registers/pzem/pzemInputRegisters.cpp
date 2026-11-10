@@ -73,10 +73,12 @@ String pzemInputRegister::toJson() const
 bool pzemInputRegister::isChanged(const pzemInputRegister &value) const
 {
   return alarmStatus != value.alarmStatus
-         || isSignificantChange(lineToNeutralVolts, value.lineToNeutralVolts, deadbandVolts, deadbandRelPercent)
+         || isSignificantChange(lineToNeutralVolts, value.lineToNeutralVolts, deadbandVolts, deadbandRelPercentFixed)
          || isSignificantChange(current, value.current, deadbandAmps, deadbandRelPercent)
          || isSignificantChange(activePower, value.activePower, deadbandWatts, deadbandRelPercent)
-         || isSignificantChange(energyValue, value.energyValue, deadbandKwh, deadbandRelPercent)
-         || isSignificantChange(frequencyValue, value.frequencyValue, deadbandHz, deadbandRelPercent)
-         || isSignificantChange(powerFactor, value.powerFactor, deadbandPowerFactor, deadbandRelPercent);
+         // energyValue накопительный и в Вт*ч, а не кВт*ч: любой прирост
+         // перекрывает порог, что для счётчика и нужно.
+         || isSignificantChange(energyValue, value.energyValue, deadbandKwh, deadbandRelPercentFixed)
+         || isSignificantChange(frequencyValue, value.frequencyValue, deadbandHz, deadbandRelPercentFixed)
+         || isSignificantChange(powerFactor, value.powerFactor, deadbandPowerFactor, deadbandRelPercentFixed);
 }

@@ -45,7 +45,7 @@ void PzemProcessing::restartTimer() {
 }
 
 void PzemProcessing::onPollTimer() {
-  LOG_PROC(PSTR("PzemProcessing::onPollTimer"));
+  LOG_MODBUS(PSTR("PzemProcessing::onPollTimer"));
 
   if (request(0, pzemStartRegister, pzemRegisterCount))
     return;
@@ -61,8 +61,8 @@ void PzemProcessing::onData(ModbusMessage response, uint32_t token) {
 
   pzemInputRegister current(response);
   const String payload = current.toJson();
-  LOG_PROC(PSTR("%s"), payload.c_str());
 
+  // Payload печатает MqttContext::publish, и только при реальной отправке.
   const uint32_t epoch = _publisher.connectEpoch();
   if (_gate.needsForcedPublish(epoch) || current.isChanged(_lastPublishedValue)) {
     // Состояние фиксируем только после успешной отправки.

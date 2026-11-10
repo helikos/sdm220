@@ -40,8 +40,10 @@ String SDM220InputRegisterTotal::toJson() const
   return output;
 }
 
+// Накопительные счётчики: только абсолютный порог, см. комментарий
+// к deadbandRelPercentFixed в configuration.h.
 bool SDM220InputRegisterTotal::isChanged(const SDM220InputRegisterTotal &value) const
 {
-  return isSignificantChange(totalActiveEnergy, value.totalActiveEnergy, deadbandKwh, deadbandRelPercent)
-         || isSignificantChange(totalReactiveEnergy, value.totalReactiveEnergy, deadbandKvarh, deadbandRelPercent);
+  return isSignificantChange(totalActiveEnergy, value.totalActiveEnergy, deadbandKwh, deadbandRelPercentFixed)
+         || isSignificantChange(totalReactiveEnergy, value.totalReactiveEnergy, deadbandKvarh, deadbandRelPercentFixed);
 }
